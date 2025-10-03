@@ -16,6 +16,7 @@ builder.Services.Configure<RickAndMortyApiSettings>(
     builder.Configuration.GetSection(RickAndMortyApiSettings.SectionName));
 
 builder.Services.AddHttpClient<IFetchCharactersService, FetchCharactersService>();
+builder.Services.AddHttpClient<IFetchEpisodesService, FetchEpisodesService>();
 
 builder.Services.Scan(scan => scan
     .FromAssemblyOf<Program>()
@@ -32,6 +33,9 @@ await dbContext.Database.MigrateAsync();
 
 var fetchService = scope.ServiceProvider.GetRequiredService<IFetchCharactersService>();
 await fetchService.ExecuteAsync();
+
+var fetchEpisodesService = scope.ServiceProvider.GetRequiredService<IFetchEpisodesService>();
+await fetchEpisodesService.ExecuteAsync();
 
 System.Console.WriteLine("Press any key to exit...");
 System.Console.ReadKey();

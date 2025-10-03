@@ -6,6 +6,7 @@ namespace RickAndMorty.Infrastructure;
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<Character> Characters => Set<Character>();
+    public DbSet<Episode> Episodes => Set<Episode>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -26,6 +27,18 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             
             entity.HasIndex(c => c.Status);
             entity.HasIndex(c => c.CreatedAt);
+        });
+        modelBuilder.Entity<Episode>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+    
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.EpisodeCode).IsRequired().HasMaxLength(10);
+            entity.Property(e => e.AirDate).IsRequired().HasMaxLength(50);
+    
+            entity.HasIndex(e => e.EpisodeCode);
+            entity.HasIndex(e => e.CreatedAt);
         });
     }
 }

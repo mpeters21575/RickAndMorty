@@ -1,0 +1,143 @@
+﻿@inherits LayoutComponentBase
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="@_theme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" 
+                       Color="Color.Inherit" 
+                       Edge="Edge.Start" 
+                       OnClick="@ToggleDrawer" />
+        <MudIcon Icon="@CustomIcons.Portal" Size="Size.Large" Class="mr-2" />
+        <MudText Typo="Typo.h5" Class="mr-4">Rick & Morty Database</MudText>
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
+                       Color="Color.Inherit" 
+                       Edge="Edge.End"
+                       OnClick="RefreshData"
+                       Title="Refresh Data" />
+        <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" 
+                       Color="Color.Inherit" 
+                       Edge="Edge.End"
+                       OnClick="ToggleDarkMode"
+                       Title="Toggle Theme" />
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+        <MudDrawerHeader>
+            <MudText Typo="Typo.h6" Color="Color.Primary">Navigation</MudText>
+        </MudDrawerHeader>
+        <NavMenu />
+    </MudDrawer>
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4 mb-4" Style="overflow-y: auto;">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _isDarkMode = true;
+    private bool _drawerOpen = true;
+    private readonly MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#00b8a9",
+            Secondary = "#44d62c",
+            Tertiary = "#97ce4c",
+            AppbarBackground = "#00b8a9",
+            AppbarText = "#ffffff",
+            Background = "#f5f6fa",
+            BackgroundGray = "#e8eaf0",
+            Surface = "#ffffff",
+            DrawerBackground = "#ffffff",
+            DrawerText = "#2d3436",
+            DrawerIcon = "#636e72",
+            TextPrimary = "#1a1a2e",
+            TextSecondary = "#636e72",
+            ActionDefault = "#636e72",
+            ActionDisabled = "#b2bec3",
+            ActionDisabledBackground = "#dfe6e9",
+            Divider = "#dfe6e9",
+            DividerLight = "#ecf0f1",
+            TableLines = "#dfe6e9",
+            LinesDefault = "#dfe6e9",
+            LinesInputs = "#b2bec3",
+            TextDisabled = "#b2bec3",
+            Info = "#4285f4",
+            Success = "#44d62c",
+            Warning = "#fbbc04",
+            Error = "#ea4335",
+            Dark = "#1a1a2e"
+        },
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#00ff41",
+            Secondary = "#44d62c",
+            Tertiary = "#97ce4c",
+            AppbarBackground = "#0a0e27",
+            AppbarText = "#00ff41",
+            Background = "#0f172a",
+            BackgroundGray = "#1e293b",
+            Surface = "#1a1a2e",
+            DrawerBackground = "#0f0f23",
+            DrawerText = "#e0e0e0",
+            DrawerIcon = "#00ff41",
+            TextPrimary = "#e0e0e0",
+            TextSecondary = "#94a3b8",
+            ActionDefault = "#94a3b8",
+            ActionDisabled = "#475569",
+            ActionDisabledBackground = "#334155",
+            Divider = "#334155",
+            DividerLight = "#1e293b",
+            TableLines = "#334155",
+            TableStriped = "#1e293b",
+            LinesDefault = "#334155",
+            LinesInputs = "#475569",
+            TextDisabled = "#64748b",
+            Info = "#06b6d4",
+            Success = "#00ff41",
+            Warning = "#fbbf24",
+            Error = "#ef4444",
+            Dark = "#0a0e27",
+            PrimaryContrastText = "#0a0e27",
+            SecondaryContrastText = "#0a0e27",
+            TertiaryContrastText = "#0a0e27",
+            InfoContrastText = "#ffffff",
+            SuccessContrastText = "#0a0e27",
+            WarningContrastText = "#0a0e27",
+            ErrorContrastText = "#ffffff",
+            DarkContrastText = "#ffffff"
+        },
+        Typography = new Typography
+        {
+            Default = new Default
+            {
+                FontFamily = new[] { "Poppins", "Roboto", "Helvetica", "Arial", "sans-serif" }
+            }
+        }
+    };
+
+    private void ToggleDarkMode()
+    {
+        _isDarkMode = !_isDarkMode;
+    }
+
+    private void ToggleDrawer()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private void RefreshData()
+    {
+        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+    }
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+}

@@ -6,7 +6,14 @@
     <NotFound>
         <PageTitle>Not found</PageTitle>
         <LayoutView Layout="@typeof(MainLayout)">
-            <p role="alert">Sorry, there's nothing at this address.</p>
+            <MudContainer Class="mt-16 d-flex flex-column align-center">
+                <MudIcon Icon="@Icons.Material.Filled.SentimentVeryDissatisfied" Size="Size.Large" Style="font-size: 8rem;" />
+                <MudText Typo="Typo.h3" Class="mt-4">404 - Portal Not Found</MudText>
+                <MudText Typo="Typo.body1" Class="mt-2">This dimension doesn't exist... yet.</MudText>
+                <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary" Class="mt-4">
+                    Return to C-137
+                </MudButton>
+            </MudContainer>
         </LayoutView>
     </NotFound>
 </Router>

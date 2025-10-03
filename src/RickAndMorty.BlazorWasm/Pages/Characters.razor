@@ -1,0 +1,190 @@
+﻿@page "/"
+@using RickAndMorty.BlazorWasm.Models
+@using RickAndMorty.BlazorWasm.Services
+@inject ICharacterService CharacterService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Characters</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.People" Class="mr-2" />
+    Characters
+</MudText>
+
+<MudTable Items="@_characters" 
+          Dense="true" 
+          Hover="true" 
+          Striped="true"
+          Loading="@_loading"
+          LoadingProgressColor="Color.Primary"
+          Height="calc(100vh - 250px)"
+          FixedHeader="true" 
+          Filter="new Func<CharacterDto, bool>(FilterFunc)"
+          @bind-SelectedItem="_selectedCharacter">
+    <ToolBarContent>
+        <MudTextField @bind-Value="_searchString" 
+                      Placeholder="Search characters..." 
+                      Adornment="Adornment.Start" 
+                      AdornmentIcon="@Icons.Material.Filled.Search" 
+                      IconSize="Size.Medium"
+                      Class="mt-0"
+                      Immediate="true" />
+        <MudSpacer />
+        <MudTextField @bind-Value="_planetFilter" 
+                      Placeholder="Planet filter..." 
+                      Adornment="Adornment.Start" 
+                      AdornmentIcon="@Icons.Material.Filled.Public" 
+                      IconSize="Size.Medium"
+                      Class="mt-0 mr-2"
+                      Immediate="true" />
+        <MudSelect @bind-Value="_statusFilter" 
+                   Placeholder="Status" 
+                   AnchorOrigin="Origin.BottomCenter"
+                   Clearable="true"
+                   Class="mt-0 mr-2"
+                   Style="min-width: 150px;">
+            <MudSelectItem Value="@("Alive")">Alive</MudSelectItem>
+            <MudSelectItem Value="@("Dead")">Dead</MudSelectItem>
+            <MudSelectItem Value="@("unknown")">Unknown</MudSelectItem>
+        </MudSelect>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenAddDialog">
+            Add Character
+        </MudButton>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh><MudTableSortLabel SortBy="new Func<CharacterDto, object>(x => x.Id)">ID</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<CharacterDto, object>(x => x.Name)">Name</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<CharacterDto, object>(x => x.Status)">Status</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<CharacterDto, object>(x => x.Species)">Species</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<CharacterDto, object>(x => x.OriginName)">Origin</MudTableSortLabel></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="ID">
+            <MudAvatar Color="Color.Primary" Size="Size.Small">
+                @context.Name[0]
+            </MudAvatar>
+            <span class="ml-2">@context.Id</span>
+        </MudTd>
+        <MudTd DataLabel="Name">@context.Name</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" 
+                     Color="@GetStatusColor(context.Status)"
+                     Icon="@Icons.Material.Filled.Circle">
+                @context.Status
+            </MudChip>
+        </MudTd>
+        <MudTd DataLabel="Species">
+            <MudText Typo="Typo.body2">
+                <MudIcon Icon="@Icons.Material.Filled.Pets" Size="Size.Small" Class="mr-1" />
+                @context.Species
+            </MudText>
+        </MudTd>
+        <MudTd DataLabel="Origin">
+            <MudText Typo="Typo.body2">
+                <MudIcon Icon="@Icons.Material.Filled.Public" Size="Size.Small" Class="mr-1" />
+                @context.OriginName
+            </MudText>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>No characters found</MudText>
+    </NoRecordsContent>
+    <LoadingContent>
+        <MudText>Loading characters...</MudText>
+    </LoadingContent>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private List<CharacterDto> _characters = new();
+    private CharacterDto? _selectedCharacter;
+    private bool _loading = true;
+    private string _searchString = string.Empty;
+    private string _planetFilter = string.Empty;
+    private string? _statusFilter;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCharactersAsync();
+    }
+
+    private async Task LoadCharactersAsync()
+    {
+        try
+        {
+            _loading = true;
+            _characters = await CharacterService.GetAllCharactersAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load characters: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private bool FilterFunc(CharacterDto character)
+    {
+        if (!string.IsNullOrWhiteSpace(_searchString))
+        {
+            if (!character.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) &&
+                !character.Species.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(_planetFilter))
+        {
+            if (!character.OriginName.Contains(_planetFilter, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(_statusFilter))
+        {
+            if (!character.Status.Equals(_statusFilter, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private Color GetStatusColor(string status) => status.ToLower() switch
+    {
+        "alive" => Color.Success,
+        "dead" => Color.Error,
+        _ => Color.Default
+    };
+
+    private async Task OpenAddDialog()
+    {
+        var dialog = await DialogService.ShowAsync<AddCharacterDialog>("Add New Character");
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is CreateCharacterRequest request)
+        {
+            try
+            {
+                await CharacterService.CreateCharacterAsync(request);
+                Snackbar.Add($"Character '{request.Name}' added successfully!", Severity.Success);
+                await LoadCharactersAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Failed to add character: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}

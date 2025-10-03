@@ -1,0 +1,181 @@
+@page "/planets"
+@using RickAndMorty.BlazorWasm.Models
+@using RickAndMorty.BlazorWasm.Services
+@inject ICharacterService CharacterService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Planets</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.Public" Class="mr-2" />
+    Explore Planets
+</MudText>
+
+<MudPaper Elevation="2" Class="pa-4 mb-4">
+    <MudTextField @bind-Value="_searchPlanet" 
+                  Placeholder="Search for a planet..." 
+                  Adornment="Adornment.Start" 
+                  AdornmentIcon="@Icons.Material.Filled.Search" 
+                  IconSize="Size.Medium"
+                  Immediate="true"
+                  OnKeyDown="OnSearchKeyDown"
+                  HelperText="Press Enter to search" />
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+}
+
+@if (_selectedPlanet != null && !_loading)
+{
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.h5" Color="Color.Primary">@_selectedPlanet</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Found @_planetCharacters.Count character(s) from this planet
+                </MudText>
+            </MudItem>
+            <MudItem xs="12" md="6" Class="d-flex align-end justify-end">
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Secondary"
+                           StartIcon="@Icons.Material.Filled.Clear"
+                           OnClick="ClearSearch">
+                    Clear Search
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+}
+
+@if (_planetCharacters.Count > 0 && !_loading)
+{
+    <MudGrid>
+        @foreach (var character in _planetCharacters)
+        {
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudCard Elevation="3" Class="cursor-pointer" @onclick="() => ViewCharacterDetails(character)">
+                    <MudCardHeader>
+                        <CardHeaderAvatar>
+                            <MudAvatar Color="Color.Primary" Size="Size.Large">
+                                @character.Name[0]
+                            </MudAvatar>
+                        </CardHeaderAvatar>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">@character.Name</MudText>
+                            <MudChip T="string" Size="Size.Small" 
+                                     Color="@GetStatusColor(character.Status)"
+                                     Icon="@Icons.Material.Filled.Circle">
+                                @character.Status
+                            </MudChip>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            <MudIcon Icon="@Icons.Material.Filled.Pets" Size="Size.Small" Class="mr-1" />
+                            @character.Species
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Primary" Class="mt-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Public" Size="Size.Small" Class="mr-1" />
+                            @character.OriginName
+                        </MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@if (!_loading && _selectedPlanet != null && _planetCharacters.Count == 0)
+{
+    <MudPaper Elevation="0" Class="pa-16 d-flex flex-column align-center">
+        <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Style="font-size: 6rem;" Color="Color.Secondary" />
+        <MudText Typo="Typo.h5" Class="mt-4">No characters found</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary">
+            No characters from "@_selectedPlanet" in the database
+        </MudText>
+    </MudPaper>
+}
+
+@if (!_loading && _selectedPlanet == null)
+{
+    <MudPaper Elevation="0" Class="pa-16 d-flex flex-column align-center">
+        <MudIcon Icon="@Icons.Material.Filled.Public" Size="Size.Large" Style="font-size: 6rem;" Color="Color.Primary" />
+        <MudText Typo="Typo.h5" Class="mt-4">Search for a Planet</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="text-center">
+            Enter a planet name above and press Enter to see all characters from that dimension
+        </MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-4 text-center">
+            <strong>Popular planets:</strong> Earth, Citadel, Bird World, Alphabetrium
+        </MudText>
+    </MudPaper>
+}
+
+@code {
+    private List<CharacterDto> _planetCharacters = new();
+    private bool _loading;
+    private string _searchPlanet = string.Empty;
+    private string? _selectedPlanet;
+
+    private async Task SearchPlanet()
+    {
+        if (string.IsNullOrWhiteSpace(_searchPlanet))
+        {
+            return;
+        }
+
+        try
+        {
+            _loading = true;
+            _selectedPlanet = _searchPlanet.Trim();
+            _planetCharacters = await CharacterService.GetCharactersByPlanetAsync(_selectedPlanet);
+            
+            if (_planetCharacters.Count > 0)
+            {
+                Snackbar.Add($"Found {_planetCharacters.Count} character(s) from {_selectedPlanet}", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"No characters found from {_selectedPlanet}", Severity.Info);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to search planet: {ex.Message}", Severity.Error);
+            _selectedPlanet = null;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchPlanet();
+        }
+    }
+
+    private void ClearSearch()
+    {
+        _searchPlanet = string.Empty;
+        _selectedPlanet = null;
+        _planetCharacters.Clear();
+    }
+
+    private void ViewCharacterDetails(CharacterDto character)
+    {
+        Snackbar.Add($"Viewing {character.Name}", Severity.Info);
+    }
+
+    private Color GetStatusColor(string status) => status.ToLower() switch
+    {
+        "alive" => Color.Success,
+        "dead" => Color.Error,
+        _ => Color.Default
+    };
+}

@@ -1,0 +1,132 @@
+﻿@using RickAndMorty.BlazorWasm.Models
+@using System.ComponentModel.DataAnnotations
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="@_isValid" ValidationDelay="0">
+            <MudTextField @bind-Value="_model.Name"
+                          Label="Name"
+                          Required="true"
+                          RequiredError="Name is required"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Counter="100"
+                          MaxLength="100"
+                          Immediate="true"
+                          Class="mb-4" />
+
+            <MudSelect @bind-Value="_model.Status"
+                       Label="Status"
+                       Required="true"
+                       RequiredError="Status is required"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       AnchorOrigin="Origin.BottomCenter"
+                       Class="mb-4">
+                <MudSelectItem Value="@("Alive")">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.FavoriteBorder" Color="Color.Success" Size="Size.Small" Class="mr-2" />
+                        Alive
+                    </div>
+                </MudSelectItem>
+                <MudSelectItem Value="@("Dead")">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Close" Color="Color.Error" Size="Size.Small" Class="mr-2" />
+                        Dead
+                    </div>
+                </MudSelectItem>
+                <MudSelectItem Value="@("unknown")">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Help" Color="Color.Default" Size="Size.Small" Class="mr-2" />
+                        Unknown
+                    </div>
+                </MudSelectItem>
+            </MudSelect>
+
+            <MudTextField @bind-Value="_model.Species"
+                          Label="Species"
+                          Required="true"
+                          RequiredError="Species is required"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Counter="50"
+                          MaxLength="50"
+                          Immediate="true"
+                          HelperText="e.g., Human, Alien, Robot"
+                          Class="mb-4" />
+
+            <MudTextField @bind-Value="_model.OriginName"
+                          Label="Origin Planet"
+                          Required="true"
+                          RequiredError="Origin is required"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Counter="100"
+                          MaxLength="100"
+                          Immediate="true"
+                          HelperText="e.g., Earth (C-137), Citadel of Ricks"
+                          Class="mb-4" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Color="Color.Default">
+            Cancel
+        </MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="Submit"
+                   Disabled="@(!_isValid)"
+                   StartIcon="@Icons.Material.Filled.Add">
+            Add Character
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; } = default!;
+
+    private MudForm _form = default!;
+    private bool _isValid;
+    private readonly CharacterModel _model = new();
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        
+        if (_isValid)
+        {
+            var request = new CreateCharacterRequest(
+                _model.Name.Trim(),
+                _model.Status,
+                _model.Species.Trim(),
+                _model.OriginName.Trim()
+            );
+            
+            MudDialog.Close(DialogResult.Ok(request));
+        }
+    }
+
+    private sealed class CharacterModel
+    {
+        [Required(ErrorMessage = "Name is required")]
+        [StringLength(100, ErrorMessage = "Name must be less than 100 characters")]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Status is required")]
+        public string Status { get; set; } = "Alive";
+
+        [Required(ErrorMessage = "Species is required")]
+        [StringLength(50, ErrorMessage = "Species must be less than 50 characters")]
+        public string Species { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Origin is required")]
+        [StringLength(100, ErrorMessage = "Origin must be less than 100 characters")]
+        public string OriginName { get; set; } = string.Empty;
+    }
+}

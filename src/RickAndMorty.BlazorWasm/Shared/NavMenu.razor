@@ -1,0 +1,29 @@
+﻿@inject NavigationManager NavigationManager
+
+<MudNavMenu>
+    <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.People">
+        Characters
+    </MudNavLink>
+    <MudNavLink Href="/planets" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Public">
+        Planets
+    </MudNavLink>
+    <MudNavLink Href="/episodes" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Tv">
+        Episodes
+    </MudNavLink>
+    <MudDivider Class="my-2" />
+    <MudNavGroup Title="About" Icon="@Icons.Material.Filled.Info" Expanded="false">
+        <MudNavLink Href="https://rickandmortyapi.com/documentation" 
+                    Target="_blank" 
+                    Icon="@Icons.Material.Filled.Link">
+            API Docs
+        </MudNavLink>
+    </MudNavGroup>
+</MudNavMenu>
+
+@code {
+    private string GetActiveClass(string href)
+    {
+        var currentPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        return currentPath == href ? "mud-primary-text" : string.Empty;
+    }
+}

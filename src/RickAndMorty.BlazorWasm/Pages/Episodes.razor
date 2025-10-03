@@ -1,0 +1,123 @@
+@page "/episodes"
+@using RickAndMorty.BlazorWasm.Models
+@using RickAndMorty.BlazorWasm.Services
+@inject ICharacterService CharacterService
+@inject ISnackbar Snackbar
+
+<PageTitle>Episodes</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.Tv" Class="mr-2" />
+    Episodes
+</MudText>
+
+<MudTable Items="@_episodes" 
+          Dense="true" 
+          Hover="true" 
+          Striped="true"
+          Loading="@_loading"
+          LoadingProgressColor="Color.Primary"
+          Filter="new Func<EpisodeDto, bool>(FilterFunc)"
+          Height="calc(100vh - 250px)"
+          FixedHeader="true" 
+          @bind-SelectedItem="_selectedEpisode">
+    <ToolBarContent>
+        <MudTextField @bind-Value="_searchString" 
+                      Placeholder="Search episodes..." 
+                      Adornment="Adornment.Start" 
+                      AdornmentIcon="@Icons.Material.Filled.Search" 
+                      IconSize="Size.Medium"
+                      Class="mt-0"
+                      Immediate="true" />
+        <MudSpacer />
+        <MudTextField @bind-Value="_seasonFilter" 
+                      Placeholder="Season (e.g., S01)" 
+                      Adornment="Adornment.Start" 
+                      AdornmentIcon="@Icons.Material.Filled.FilterList" 
+                      IconSize="Size.Medium"
+                      Class="mt-0"
+                      Immediate="true" />
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh><MudTableSortLabel SortBy="new Func<EpisodeDto, object>(x => x.Id)">ID</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<EpisodeDto, object>(x => x.Episode)">Episode</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<EpisodeDto, object>(x => x.Name)">Name</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<EpisodeDto, object>(x => x.AirDate)">Air Date</MudTableSortLabel></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="ID">@context.Id</MudTd>
+        <MudTd DataLabel="Episode">
+            <MudChip T="string" Color="Color.Primary" Size="Size.Small">
+                @context.Episode
+            </MudChip>
+        </MudTd>
+        <MudTd DataLabel="Name">@context.Name</MudTd>
+        <MudTd DataLabel="Air Date">
+            <MudText Typo="Typo.body2">
+                <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Class="mr-1" />
+                @context.AirDate
+            </MudText>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>No episodes found</MudText>
+    </NoRecordsContent>
+    <LoadingContent>
+        <MudText>Loading episodes...</MudText>
+    </LoadingContent>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private List<EpisodeDto> _episodes = new();
+    private EpisodeDto? _selectedEpisode;
+    private bool _loading = true;
+    private string _searchString = string.Empty;
+    private string _seasonFilter = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEpisodesAsync();
+    }
+
+    private async Task LoadEpisodesAsync()
+    {
+        try
+        {
+            _loading = true;
+            _episodes = await CharacterService.GetAllEpisodesAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load episodes: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private bool FilterFunc(EpisodeDto episode)
+    {
+        if (!string.IsNullOrWhiteSpace(_searchString))
+        {
+            if (!episode.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) &&
+                !episode.Episode.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(_seasonFilter))
+        {
+            if (!episode.Episode.StartsWith(_seasonFilter, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
