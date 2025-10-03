@@ -88,7 +88,7 @@ public sealed class FetchCharactersServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ExecuteAsync_ClearsDatabaseBeforeSaving()
+    public async Task ExecuteAsync_AddsOnlyNewCharacters()
     {
         await SeedExistingCharactersAsync();
         
@@ -114,9 +114,9 @@ public sealed class FetchCharactersServiceTests : IAsyncLifetime
 
         var savedCharacters = await _dbContext.Characters.ToListAsync();
         
-        Assert.Single(savedCharacters);
-        Assert.Equal(100, savedCharacters[0].Id);
-        Assert.Equal("New Character", savedCharacters[0].Name);
+        Assert.Equal(2, savedCharacters.Count);
+        Assert.Contains(savedCharacters, c => c.Id == 50);
+        Assert.Contains(savedCharacters, c => c.Id == 100);
     }
 
     [Fact]

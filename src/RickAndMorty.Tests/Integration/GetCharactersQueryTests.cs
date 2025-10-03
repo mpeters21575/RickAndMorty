@@ -27,6 +27,7 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
     {
         _dbContext.Dispose();
         _cache.Dispose();
+        
         return Task.CompletedTask;
     }
 
@@ -34,7 +35,6 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
     public async Task ExecuteAsync_ReturnsAllCharacters_WhenCacheIsEmpty()
     {
         var query = new GetCharactersQuery(_dbContext, _cache);
-
         var result = await query.ExecuteAsync();
 
         Assert.NotNull(result);
@@ -47,9 +47,7 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
     public async Task ExecuteAsync_ReturnsCharactersInAlphabeticalOrder()
     {
         var query = new GetCharactersQuery(_dbContext, _cache);
-
         var result = await query.ExecuteAsync();
-
         var orderedNames = result.Characters.Select(c => c.Name).ToList();
         var expectedOrder = orderedNames.OrderBy(n => n).ToList();
         
@@ -60,12 +58,12 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
     public async Task ExecuteAsync_ReturnsCachedData_WhenCalledWithinFiveMinutes()
     {
         var query = new GetCharactersQuery(_dbContext, _cache);
-
         var firstResult = await query.ExecuteAsync();
         var secondResult = await query.ExecuteAsync();
 
         Assert.Equal(firstResult.Characters.Count, secondResult.Characters.Count);
-        Assert.True(secondResult.FromDatabase);
+        Assert.True(firstResult.FromDatabase);
+        Assert.False(secondResult.FromDatabase);
         Assert.Equal(firstResult.LastFetchedAt, secondResult.LastFetchedAt);
     }
 
@@ -73,7 +71,6 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
     public async Task ExecuteAsync_ReturnsOnlyAliveCharacters()
     {
         var query = new GetCharactersQuery(_dbContext, _cache);
-
         var result = await query.ExecuteAsync();
 
         Assert.All(result.Characters, character => 
@@ -85,10 +82,9 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
     public async Task ExecuteAsync_MapsCharacterPropertiesCorrectly()
     {
         var query = new GetCharactersQuery(_dbContext, _cache);
-
         var result = await query.ExecuteAsync();
-
         var firstCharacter = result.Characters.First();
+        
         Assert.NotEqual(0, firstCharacter.Id);
         Assert.NotEmpty(firstCharacter.Name);
         Assert.NotEmpty(firstCharacter.Species);

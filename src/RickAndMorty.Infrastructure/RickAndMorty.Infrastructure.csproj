@@ -13,7 +13,6 @@
   <ItemGroup>
     <Folder Include="$&quot;https:\rickandmortyapi.com\api\character\?page={page}&quot;\" />
     <Folder Include="Migrations\" />
-    <Folder Include="Services\" />
   </ItemGroup>
 
   <PropertyGroup>
