@@ -3,12 +3,13 @@
 @using RickAndMorty.BlazorWasm.Services
 @inject ICharacterService CharacterService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <PageTitle>Episodes</PageTitle>
 
 <MudText Typo="Typo.h4" Class="mb-4">
     <MudIcon Icon="@Icons.Material.Filled.Tv" Class="mr-2" />
-    Episodes
+    Rick and Morty Episodes
 </MudText>
 
 <MudTable Items="@_episodes" 
@@ -18,9 +19,11 @@
           Loading="@_loading"
           LoadingProgressColor="Color.Primary"
           Filter="new Func<EpisodeDto, bool>(FilterFunc)"
+          @bind-SelectedItem="_selectedEpisode"
           Height="calc(100vh - 250px)"
-          FixedHeader="true" 
-          @bind-SelectedItem="_selectedEpisode">
+          FixedHeader="true"
+          OnRowClick="@((TableRowClickEventArgs<EpisodeDto> args) => OnRowClick(args))"
+          T="EpisodeDto">
     <ToolBarContent>
         <MudTextField @bind-Value="_searchString" 
                       Placeholder="Search episodes..." 
@@ -43,6 +46,7 @@
         <MudTh><MudTableSortLabel SortBy="new Func<EpisodeDto, object>(x => x.Episode)">Episode</MudTableSortLabel></MudTh>
         <MudTh><MudTableSortLabel SortBy="new Func<EpisodeDto, object>(x => x.Name)">Name</MudTableSortLabel></MudTh>
         <MudTh><MudTableSortLabel SortBy="new Func<EpisodeDto, object>(x => x.AirDate)">Air Date</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<EpisodeDto, object>(x => x.CharacterCount)">Characters</MudTableSortLabel></MudTh>
     </HeaderContent>
     <RowTemplate>
         <MudTd DataLabel="ID">@context.Id</MudTd>
@@ -57,6 +61,11 @@
                 <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Class="mr-1" />
                 @context.AirDate
             </MudText>
+        </MudTd>
+        <MudTd DataLabel="Characters">
+            <MudChip T="string" Color="Color.Secondary" Size="Size.Small" Icon="@Icons.Material.Filled.People">
+                @context.CharacterCount
+            </MudChip>
         </MudTd>
     </RowTemplate>
     <NoRecordsContent>
@@ -119,5 +128,22 @@
         }
 
         return true;
+    }
+
+    private async Task OnRowClick(TableRowClickEventArgs<EpisodeDto> args)
+    {
+        var parameters = new DialogParameters<EpisodeDetailsDialog>
+        {
+            { x => x.Episode, args.Item }
+        };
+
+        var options = new DialogOptions 
+        { 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        await DialogService.ShowAsync<EpisodeDetailsDialog>("Episode Details", parameters, options);
     }
 }

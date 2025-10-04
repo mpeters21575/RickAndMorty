@@ -26,7 +26,8 @@ public sealed class GetCharactersByPlanetQuery(AppDbContext dbContext) : IGetCha
                 c.Name,
                 c.Status,
                 c.Species,
-                c.Origin.Name
+                c.Origin.Name,
+                c.ImageUrl
             ))
             .ToListAsync(cancellationToken);
     }

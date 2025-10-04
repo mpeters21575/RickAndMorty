@@ -4,5 +4,6 @@ public sealed record EpisodeDto(
     int Id,
     string Name,
     string Episode,
-    string AirDate
+    string AirDate,
+    int CharacterCount
 );

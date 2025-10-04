@@ -1,6 +1,9 @@
 using Carter;
 using Microsoft.EntityFrameworkCore;
 using RickAndMorty.Infrastructure;
+using RickAndMorty.Infrastructure.Configuration;
+using RickAndMorty.Web.Hubs;
+using RickAndMorty.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,14 +11,20 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
 
+builder.Services.Configure<CharacterMonitorSettings>(
+    builder.Configuration.GetSection(CharacterMonitorSettings.SectionName));
+
+builder.Services.AddSignalR();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazor", policy =>
     {
         policy.WithOrigins("https://localhost:5001", "http://localhost:5000")
-            .AllowAnyMethod()
-            .AllowAnyHeader()
-            .WithExposedHeaders("from-database", "last-fetched-at");
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials()
+              .WithExposedHeaders("from-database", "last-fetched-at");
     });
 });
 
@@ -42,6 +51,8 @@ builder.Services.Scan(scan => scan
     .WithScopedLifetime()
 );
 
+builder.Services.AddHostedService<CharacterMonitorHostedService>();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -50,15 +61,18 @@ using (var scope = app.Services.CreateScope())
     await dbContext.Database.MigrateAsync();
 }
 
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+if (app.Environment.IsDevelopment())
 {
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Rick and Morty API v1");
-    options.RoutePrefix = "swagger";
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Rick and Morty API v1");
+        options.RoutePrefix = "swagger";
+    });
+}
 
 app.UseCors("AllowBlazor");
-
 app.MapCarter();
+app.MapHub<CharacterHub>("/hubs/character");
 
 await app.RunAsync();

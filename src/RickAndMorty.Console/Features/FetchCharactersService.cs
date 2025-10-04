@@ -113,6 +113,7 @@ public sealed class FetchCharactersService(
         Name = apiCharacter.Name,
         Status = apiCharacter.Status,
         Species = apiCharacter.Species,
+        ImageUrl = apiCharacter.Image,
         Origin = new Location 
         { 
             Name = apiCharacter.Origin.Name, 

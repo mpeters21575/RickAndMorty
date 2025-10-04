@@ -5,5 +5,6 @@ public sealed record CharacterDto(
     string Name,
     string Status,
     string Species,
-    string OriginName
+    string OriginName,
+    string ImageUrl
 );

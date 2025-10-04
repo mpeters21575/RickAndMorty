@@ -109,6 +109,8 @@ public sealed class FetchEpisodesService(
         Name = apiEpisode.Name,
         EpisodeCode = apiEpisode.Episode,
         AirDate = apiEpisode.Air_date,
+        Url = apiEpisode.Url,
+        Characters = apiEpisode.Characters,
         CreatedAt = DateTime.UtcNow
     };
 }

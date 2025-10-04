@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using RickAndMorty.Domain.Models;
 using RickAndMorty.Infrastructure;
+using RickAndMorty.Infrastructure.Configuration;
 using RickAndMorty.Web.Features.GetCharacters;
 
 namespace RickAndMorty.Tests.Integration;
@@ -10,6 +12,7 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
 {
     private AppDbContext _dbContext = null!;
     private IMemoryCache _cache = null!;
+    private IOptions<CharacterMonitorSettings> _monitorSettings = null!;
 
     public async Task InitializeAsync()
     {
@@ -19,6 +22,12 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
 
         _dbContext = new AppDbContext(options);
         _cache = new MemoryCache(new MemoryCacheOptions());
+        _monitorSettings = Options.Create(new CharacterMonitorSettings
+        {
+            Enabled = true,
+            IntervalMinutes = 5,
+            TestMode = false
+        });
 
         await SeedTestDataAsync();
     }
@@ -27,14 +36,14 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
     {
         _dbContext.Dispose();
         _cache.Dispose();
-        
         return Task.CompletedTask;
     }
 
     [Fact]
     public async Task ExecuteAsync_ReturnsAllCharacters_WhenCacheIsEmpty()
     {
-        var query = new GetCharactersQuery(_dbContext, _cache);
+        var query = new GetCharactersQuery(_dbContext, _cache, _monitorSettings);
+
         var result = await query.ExecuteAsync();
 
         Assert.NotNull(result);
@@ -46,8 +55,10 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
     [Fact]
     public async Task ExecuteAsync_ReturnsCharactersInAlphabeticalOrder()
     {
-        var query = new GetCharactersQuery(_dbContext, _cache);
+        var query = new GetCharactersQuery(_dbContext, _cache, _monitorSettings);
+
         var result = await query.ExecuteAsync();
+
         var orderedNames = result.Characters.Select(c => c.Name).ToList();
         var expectedOrder = orderedNames.OrderBy(n => n).ToList();
         
@@ -57,7 +68,8 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
     [Fact]
     public async Task ExecuteAsync_ReturnsCachedData_WhenCalledWithinFiveMinutes()
     {
-        var query = new GetCharactersQuery(_dbContext, _cache);
+        var query = new GetCharactersQuery(_dbContext, _cache, _monitorSettings);
+
         var firstResult = await query.ExecuteAsync();
         var secondResult = await query.ExecuteAsync();
 
@@ -70,7 +82,8 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
     [Fact]
     public async Task ExecuteAsync_ReturnsOnlyAliveCharacters()
     {
-        var query = new GetCharactersQuery(_dbContext, _cache);
+        var query = new GetCharactersQuery(_dbContext, _cache, _monitorSettings);
+
         var result = await query.ExecuteAsync();
 
         Assert.All(result.Characters, character => 
@@ -81,10 +94,11 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
     [Fact]
     public async Task ExecuteAsync_MapsCharacterPropertiesCorrectly()
     {
-        var query = new GetCharactersQuery(_dbContext, _cache);
+        var query = new GetCharactersQuery(_dbContext, _cache, _monitorSettings);
+
         var result = await query.ExecuteAsync();
+
         var firstCharacter = result.Characters.First();
-        
         Assert.NotEqual(0, firstCharacter.Id);
         Assert.NotEmpty(firstCharacter.Name);
         Assert.NotEmpty(firstCharacter.Species);
@@ -101,6 +115,7 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
                 Name = "Rick Sanchez",
                 Status = "Alive",
                 Species = "Human",
+                ImageUrl = "https://example.com/rick.jpg",
                 Origin = new Location { Name = "Earth (C-137)", Url = "" },
                 CreatedAt = DateTime.UtcNow
             },
@@ -110,6 +125,7 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
                 Name = "Morty Smith",
                 Status = "Alive",
                 Species = "Human",
+                ImageUrl = "https://example.com/morty.jpg",
                 Origin = new Location { Name = "Earth (C-137)", Url = "" },
                 CreatedAt = DateTime.UtcNow
             },
@@ -119,6 +135,7 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
                 Name = "Summer Smith",
                 Status = "Alive",
                 Species = "Human",
+                ImageUrl = "https://example.com/summer.jpg",
                 Origin = new Location { Name = "Earth (Replacement Dimension)", Url = "" },
                 CreatedAt = DateTime.UtcNow
             },
@@ -128,6 +145,7 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
                 Name = "Beth Smith",
                 Status = "Alive",
                 Species = "Human",
+                ImageUrl = "https://example.com/beth.jpg",
                 Origin = new Location { Name = "Earth (Replacement Dimension)", Url = "" },
                 CreatedAt = DateTime.UtcNow
             },
@@ -137,6 +155,7 @@ public sealed class GetCharactersQueryTests : IAsyncLifetime
                 Name = "Jerry Smith",
                 Status = "Alive",
                 Species = "Human",
+                ImageUrl = "https://example.com/jerry.jpg",
                 Origin = new Location { Name = "Earth (Replacement Dimension)", Url = "" },
                 CreatedAt = DateTime.UtcNow
             }

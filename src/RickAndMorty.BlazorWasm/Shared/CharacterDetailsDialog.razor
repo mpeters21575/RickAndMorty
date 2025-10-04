@@ -1,0 +1,82 @@
+@using RickAndMorty.BlazorWasm.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" md="5" Class="d-flex justify-center align-center">
+                @if (!string.IsNullOrEmpty(Character.ImageUrl))
+                {
+                    <MudImage Src="@Character.ImageUrl" 
+                              Alt="@Character.Name" 
+                              Elevation="3" 
+                              Class="rounded-lg"
+                              Width="250"
+                              Height="250"
+                              ObjectFit="ObjectFit.Cover" />
+                }
+                else
+                {
+                    <MudAvatar Color="Color.Primary" Size="Size.Large" Style="width: 250px; height: 250px; font-size: 6rem;">
+                        @Character.Name[0]
+                    </MudAvatar>
+                }
+            </MudItem>
+            <MudItem xs="12" md="7">
+                <MudText Typo="Typo.h4" Class="mb-4">@Character.Name</MudText>
+                
+                <MudChip Icon="@Icons.Material.Filled.Circle" 
+                         Color="@GetStatusColor(Character.Status)" 
+                         Size="Size.Large"
+                         Class="mb-4"
+                         T="string">
+                    @Character.Status
+                </MudChip>
+
+                <MudDivider Class="my-4" />
+
+                <MudList T="string" Dense="true">
+                    <MudListItem Icon="@Icons.Material.Filled.Badge">
+                        <MudText Typo="Typo.body1">
+                            <strong>ID:</strong> @Character.Id
+                        </MudText>
+                    </MudListItem>
+                    <MudListItem Icon="@Icons.Material.Filled.Pets">
+                        <MudText Typo="Typo.body1">
+                            <strong>Species:</strong> @Character.Species
+                        </MudText>
+                    </MudListItem>
+                    <MudListItem Icon="@Icons.Material.Filled.Public">
+                        <MudText Typo="Typo.body1">
+                            <strong>Origin:</strong> @Character.OriginName
+                        </MudText>
+                    </MudListItem>
+                </MudList>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Variant="Variant.Filled" Color="Color.Primary">
+            Close
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public CharacterDto Character { get; set; } = default!;
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+
+    private Color GetStatusColor(string status) => status.ToLower() switch
+    {
+        "alive" => Color.Success,
+        "dead" => Color.Error,
+        _ => Color.Default
+    };
+}

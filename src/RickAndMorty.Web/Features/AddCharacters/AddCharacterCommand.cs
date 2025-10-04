@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using RickAndMorty.Domain.Models;
 using RickAndMorty.Infrastructure;
 using RickAndMorty.Web.CrossCutting;
+using RickAndMorty.Web.Hubs;
 
 namespace RickAndMorty.Web.Features.AddCharacters;
 
@@ -11,7 +13,10 @@ public interface IAddCharacterCommand
     Task<int> ExecuteAsync(AddCharacterRequest request, CancellationToken cancellationToken = default);
 }
 
-public sealed class AddCharacterCommand(AppDbContext dbContext, IMemoryCache cache) : IAddCharacterCommand
+public sealed class AddCharacterCommand(
+    AppDbContext dbContext, 
+    IMemoryCache cache,
+    IHubContext<CharacterHub> hubContext) : IAddCharacterCommand
 {
     public async Task<int> ExecuteAsync(AddCharacterRequest request, CancellationToken cancellationToken = default)
     {
@@ -38,6 +43,8 @@ public sealed class AddCharacterCommand(AppDbContext dbContext, IMemoryCache cac
         await dbContext.SaveChangesAsync(cancellationToken);
 
         cache.Remove(CacheKeys.Characters);
+
+        await hubContext.Clients.All.SendAsync("CharacterAdded", character.Name, cancellationToken);
 
         return character.Id;
     }

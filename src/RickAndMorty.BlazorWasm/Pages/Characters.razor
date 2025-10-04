@@ -1,15 +1,21 @@
 ﻿@page "/"
 @using RickAndMorty.BlazorWasm.Models
 @using RickAndMorty.BlazorWasm.Services
+@using Microsoft.AspNetCore.SignalR.Client
 @inject ICharacterService CharacterService
+@inject INotificationService NotificationService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject NavigationManager Navigation
+@inject IConfiguration Configuration
+@inject ILogger<Characters> Logger
+@implements IAsyncDisposable
 
 <PageTitle>Characters</PageTitle>
 
 <MudText Typo="Typo.h4" Class="mb-4">
     <MudIcon Icon="@Icons.Material.Filled.People" Class="mr-2" />
-    Characters
+    Rick and Morty Characters
 </MudText>
 
 <MudTable Items="@_characters" 
@@ -18,10 +24,12 @@
           Striped="true"
           Loading="@_loading"
           LoadingProgressColor="Color.Primary"
-          Height="calc(100vh - 250px)"
-          FixedHeader="true" 
           Filter="new Func<CharacterDto, bool>(FilterFunc)"
-          @bind-SelectedItem="_selectedCharacter">
+          @bind-SelectedItem="_selectedCharacter"
+          Height="calc(100vh - 250px)"
+          FixedHeader="true"
+          OnRowClick="@((TableRowClickEventArgs<CharacterDto> args) => OnRowClick(args))"
+          T="CharacterDto">
     <ToolBarContent>
         <MudTextField @bind-Value="_searchString" 
                       Placeholder="Search characters..." 
@@ -29,25 +37,31 @@
                       AdornmentIcon="@Icons.Material.Filled.Search" 
                       IconSize="Size.Medium"
                       Class="mt-0"
-                      Immediate="true" />
+                      Immediate="false"
+                      OnKeyDown="OnSearchKeyDown" />
         <MudSpacer />
-        <MudTextField @bind-Value="_planetFilter" 
-                      Placeholder="Planet filter..." 
+        <MudTextField @bind-Value="_speciesFilter" 
+                      Placeholder="Species filter..." 
                       Adornment="Adornment.Start" 
-                      AdornmentIcon="@Icons.Material.Filled.Public" 
+                      AdornmentIcon="@Icons.Material.Filled.Pets" 
                       IconSize="Size.Medium"
                       Class="mt-0 mr-2"
-                      Immediate="true" />
-        <MudSelect @bind-Value="_statusFilter" 
-                   Placeholder="Status" 
-                   AnchorOrigin="Origin.BottomCenter"
-                   Clearable="true"
-                   Class="mt-0 mr-2"
-                   Style="min-width: 150px;">
-            <MudSelectItem Value="@("Alive")">Alive</MudSelectItem>
-            <MudSelectItem Value="@("Dead")">Dead</MudSelectItem>
-            <MudSelectItem Value="@("unknown")">Unknown</MudSelectItem>
-        </MudSelect>
+                      Immediate="false"
+                      OnKeyDown="OnSearchKeyDown" />
+        <MudButton Variant="Variant.Outlined" 
+                   Color="Color.Secondary"
+                   StartIcon="@Icons.Material.Filled.FilterAlt"
+                   OnClick="ApplyFilters"
+                   Class="mr-2">
+            Apply Filters
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" 
+                   Color="Color.Default"
+                   StartIcon="@Icons.Material.Filled.Clear"
+                   OnClick="ClearFilters"
+                   Class="mr-2">
+            Clear
+        </MudButton>
         <MudButton Variant="Variant.Filled" 
                    Color="Color.Primary" 
                    StartIcon="@Icons.Material.Filled.Add"
@@ -71,9 +85,10 @@
         </MudTd>
         <MudTd DataLabel="Name">@context.Name</MudTd>
         <MudTd DataLabel="Status">
-            <MudChip T="string" Size="Size.Small" 
+            <MudChip Size="Size.Small" 
                      Color="@GetStatusColor(context.Status)"
-                     Icon="@Icons.Material.Filled.Circle">
+                     Icon="@Icons.Material.Filled.Circle"
+                     T="string">
                 @context.Status
             </MudChip>
         </MudTd>
@@ -106,12 +121,83 @@
     private CharacterDto? _selectedCharacter;
     private bool _loading = true;
     private string _searchString = string.Empty;
-    private string _planetFilter = string.Empty;
+    private string _speciesFilter = string.Empty;
     private string? _statusFilter;
+    private HubConnection? _hubConnection;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadCharactersAsync();
+        await InitializeSignalR();
+    }
+
+    private async Task InitializeSignalR()
+    {
+        try
+        {
+            var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "http://localhost:5116";
+            Logger.LogInformation("Connecting to SignalR hub at: {Url}", $"{apiBaseUrl}/hubs/character");
+            
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl($"{apiBaseUrl}/hubs/character")
+                .WithAutomaticReconnect()
+                .ConfigureLogging(logging =>
+                {
+                    logging.SetMinimumLevel(LogLevel.Debug);
+                })
+                .Build();
+
+            _hubConnection.On<string>("CharacterAdded", async (characterName) =>
+            {
+                Logger.LogInformation("SignalR: CharacterAdded received - {Name}", characterName);
+                Console.WriteLine($"DEBUG: CharacterAdded - {characterName}");
+                
+                NotificationService.AddNotification(characterName);
+                
+                await InvokeAsync(StateHasChanged);
+                await LoadCharactersAsync();
+            });
+
+            _hubConnection.On<string>("CharacterMonitorTest", (message) =>
+            {
+                Logger.LogInformation("SignalR: CharacterMonitorTest - {Message}", message);
+                Console.WriteLine($"DEBUG: CharacterMonitorTest - {message}");
+                Snackbar.Add($"Monitor Test: {message}", Severity.Info);
+                
+                NotificationService.AddNotification("Test Character");
+                InvokeAsync(StateHasChanged);
+            });
+
+            _hubConnection.On<int>("NewCharactersDetected", async (count) =>
+            {
+                Logger.LogInformation("SignalR: NewCharactersDetected - {Count}", count);
+                Console.WriteLine($"DEBUG: NewCharactersDetected - {count}");
+                
+                Snackbar.Add($"{count} new character(s) added to database!", Severity.Success);
+                NotificationService.AddNotification($"{count} new character{(count > 1 ? "s" : "")}");
+                
+                await InvokeAsync(StateHasChanged);
+                await LoadCharactersAsync();
+            });
+
+            await _hubConnection.StartAsync();
+            Logger.LogInformation("SignalR connection established: {State}", _hubConnection.State);
+            Console.WriteLine($"DEBUG: SignalR State - {_hubConnection.State}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to initialize SignalR");
+            Console.WriteLine($"DEBUG ERROR: {ex.Message}");
+            Snackbar.Add($"SignalR connection failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
     }
 
     private async Task LoadCharactersAsync()
@@ -131,33 +217,49 @@
         }
     }
 
+    private async Task ApplyFilters()
+    {
+        try
+        {
+            _loading = true;
+            
+            var name = string.IsNullOrWhiteSpace(_searchString) ? null : _searchString.Trim();
+            var status = string.IsNullOrWhiteSpace(_statusFilter) ? null : _statusFilter;
+            var species = string.IsNullOrWhiteSpace(_speciesFilter) ? null : _speciesFilter.Trim();
+
+            _characters = await CharacterService.GetFilteredCharactersAsync(name, status, species);
+            
+            Snackbar.Add($"Found {_characters.Count} character(s)", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to filter characters: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ClearFilters()
+    {
+        _searchString = string.Empty;
+        _speciesFilter = string.Empty;
+        _statusFilter = null;
+        await LoadCharactersAsync();
+        Snackbar.Add("Filters cleared", Severity.Info);
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await ApplyFilters();
+        }
+    }
+
     private bool FilterFunc(CharacterDto character)
     {
-        if (!string.IsNullOrWhiteSpace(_searchString))
-        {
-            if (!character.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) &&
-                !character.Species.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(_planetFilter))
-        {
-            if (!character.OriginName.Contains(_planetFilter, StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(_statusFilter))
-        {
-            if (!character.Status.Equals(_statusFilter, StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-        }
-
         return true;
     }
 
@@ -186,5 +288,22 @@
                 Snackbar.Add($"Failed to add character: {ex.Message}", Severity.Error);
             }
         }
+    }
+
+    private async Task OnRowClick(TableRowClickEventArgs<CharacterDto> args)
+    {
+        var parameters = new DialogParameters<CharacterDetailsDialog>
+        {
+            { x => x.Character, args.Item }
+        };
+
+        var options = new DialogOptions 
+        { 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        await DialogService.ShowAsync<CharacterDetailsDialog>($"Character Details", parameters, options);
     }
 }

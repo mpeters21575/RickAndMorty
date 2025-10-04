@@ -56,6 +56,7 @@ public sealed class FetchCharactersServiceTests : IAsyncLifetime
                     "name": "Rick",
                     "status": "Alive",
                     "species": "Human",
+                    "image": "https://example.com/rick.jpg",
                     "origin": { "name": "Earth", "url": "" }
                 },
                 {
@@ -63,6 +64,7 @@ public sealed class FetchCharactersServiceTests : IAsyncLifetime
                     "name": "Dead Character",
                     "status": "Dead",
                     "species": "Human",
+                    "image": "https://example.com/dead.jpg",
                     "origin": { "name": "Earth", "url": "" }
                 },
                 {
@@ -70,6 +72,7 @@ public sealed class FetchCharactersServiceTests : IAsyncLifetime
                     "name": "Morty",
                     "status": "Alive",
                     "species": "Human",
+                    "image": "https://example.com/morty.jpg",
                     "origin": { "name": "Earth", "url": "" }
                 }
             ]
@@ -101,6 +104,7 @@ public sealed class FetchCharactersServiceTests : IAsyncLifetime
                     "name": "New Character",
                     "status": "Alive",
                     "species": "Alien",
+                    "image": "https://example.com/new.jpg",
                     "origin": { "name": "Unknown", "url": "" }
                 }
             ]
@@ -131,6 +135,7 @@ public sealed class FetchCharactersServiceTests : IAsyncLifetime
                     "name": "Character 1",
                     "status": "Alive",
                     "species": "Human",
+                    "image": "https://example.com/char1.jpg",
                     "origin": { "name": "Earth", "url": "" }
                 }
             ]
@@ -146,6 +151,7 @@ public sealed class FetchCharactersServiceTests : IAsyncLifetime
                     "name": "Character 2",
                     "status": "Alive",
                     "species": "Alien",
+                    "image": "https://example.com/char2.jpg",
                     "origin": { "name": "Mars", "url": "" }
                 }
             ]
@@ -191,6 +197,7 @@ public sealed class FetchCharactersServiceTests : IAsyncLifetime
                     "name": "Test Character",
                     "status": "Alive",
                     "species": "Human",
+                    "image": "https://example.com/test.jpg",
                     "origin": { "name": "Earth", "url": "" }
                 }
             ]
@@ -231,6 +238,7 @@ public sealed class FetchCharactersServiceTests : IAsyncLifetime
                     "name": "Test Character",
                     "status": "Alive",
                     "species": "Human",
+                    "image": "https://example.com/test999.jpg",
                     "origin": { "name": "Earth", "url": "" }
                 }
             ]
@@ -259,6 +267,7 @@ public sealed class FetchCharactersServiceTests : IAsyncLifetime
                     "name": "Alive Character",
                     "status": "Alive",
                     "species": "Human",
+                    "image": "https://example.com/alive.jpg",
                     "origin": { "name": "Earth", "url": "" }
                 },
                 {
@@ -266,6 +275,7 @@ public sealed class FetchCharactersServiceTests : IAsyncLifetime
                     "name": "Dead Character",
                     "status": "Dead",
                     "species": "Human",
+                    "image": "https://example.com/dead.jpg",
                     "origin": { "name": "Earth", "url": "" }
                 },
                 {
@@ -273,6 +283,7 @@ public sealed class FetchCharactersServiceTests : IAsyncLifetime
                     "name": "Unknown Character",
                     "status": "unknown",
                     "species": "Human",
+                    "image": "https://example.com/unknown.jpg",
                     "origin": { "name": "Earth", "url": "" }
                 }
             ]
@@ -316,6 +327,7 @@ public sealed class FetchCharactersServiceTests : IAsyncLifetime
                 Name = "Old Character",
                 Status = "Alive",
                 Species = "Human",
+                ImageUrl = "https://example.com/old.jpg",
                 Origin = new Location { Name = "Earth", Url = "" },
                 CreatedAt = DateTime.UtcNow.AddDays(-1)
             }

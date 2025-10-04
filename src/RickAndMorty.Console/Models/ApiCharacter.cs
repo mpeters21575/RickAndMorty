@@ -5,5 +5,6 @@ public sealed record ApiCharacter(
     string Name,
     string Status,
     string Species,
+    string Image,
     ApiLocation Origin
 );

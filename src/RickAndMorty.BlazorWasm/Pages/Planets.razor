@@ -52,40 +52,43 @@
 
 @if (_planetCharacters.Count > 0 && !_loading)
 {
-    <MudGrid>
-        @foreach (var character in _planetCharacters)
-        {
-            <MudItem xs="12" sm="6" md="4" lg="3">
-                <MudCard Elevation="3" Class="cursor-pointer" @onclick="() => ViewCharacterDetails(character)">
-                    <MudCardHeader>
-                        <CardHeaderAvatar>
-                            <MudAvatar Color="Color.Primary" Size="Size.Large">
-                                @character.Name[0]
-                            </MudAvatar>
-                        </CardHeaderAvatar>
-                        <CardHeaderContent>
-                            <MudText Typo="Typo.h6">@character.Name</MudText>
-                            <MudChip T="string" Size="Size.Small" 
-                                     Color="@GetStatusColor(character.Status)"
-                                     Icon="@Icons.Material.Filled.Circle">
-                                @character.Status
-                            </MudChip>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            <MudIcon Icon="@Icons.Material.Filled.Pets" Size="Size.Small" Class="mr-1" />
-                            @character.Species
-                        </MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Primary" Class="mt-2">
-                            <MudIcon Icon="@Icons.Material.Filled.Public" Size="Size.Small" Class="mr-1" />
-                            @character.OriginName
-                        </MudText>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-        }
-    </MudGrid>
+    <MudPaper Elevation="2" Class="pa-4" Style="max-height: calc(100vh - 300px); overflow-y: auto;">
+        <MudGrid>
+            @foreach (var character in _planetCharacters)
+            {
+                <MudItem xs="12" sm="6" md="4" lg="3">
+                    <MudCard Elevation="3" Class="cursor-pointer" @onclick="() => ViewCharacterDetails(character)">
+                        <MudCardHeader>
+                            <CardHeaderAvatar>
+                                <MudAvatar Color="Color.Primary" Size="Size.Large">
+                                    @character.Name[0]
+                                </MudAvatar>
+                            </CardHeaderAvatar>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">@character.Name</MudText>
+                                <MudChip Size="Size.Small" 
+                                         Color="@GetStatusColor(character.Status)"
+                                         Icon="@Icons.Material.Filled.Circle"
+                                         T="string">
+                                    @character.Status
+                                </MudChip>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                <MudIcon Icon="@Icons.Material.Filled.Pets" Size="Size.Small" Class="mr-1" />
+                                @character.Species
+                            </MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Primary" Class="mt-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Public" Size="Size.Small" Class="mr-1" />
+                                @character.OriginName
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
 }
 
 @if (!_loading && _selectedPlanet != null && _planetCharacters.Count == 0)

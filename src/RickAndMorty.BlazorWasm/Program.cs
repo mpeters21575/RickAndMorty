@@ -22,5 +22,6 @@ builder.Services.AddMudServices(config =>
 });
 
 builder.Services.AddScoped<ICharacterService, CharacterService>();
+builder.Services.AddSingleton<INotificationService, NotificationService>();
 
 await builder.Build().RunAsync();

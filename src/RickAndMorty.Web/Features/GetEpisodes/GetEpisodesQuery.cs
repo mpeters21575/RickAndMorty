@@ -27,7 +27,8 @@ public sealed class GetEpisodesQuery(AppDbContext dbContext, IMemoryCache cache)
                 e.Id,
                 e.Name,
                 e.EpisodeCode,
-                e.AirDate
+                e.AirDate,
+                e.Characters.Count
             ))
             .ToListAsync(cancellationToken);
 

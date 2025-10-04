@@ -1,0 +1,159 @@
+@using RickAndMorty.BlazorWasm.Services
+@inject INotificationService NotificationService
+@implements IDisposable
+
+<MudMenu AnchorOrigin="Origin.BottomRight" 
+         TransformOrigin="Origin.TopRight"
+         Dense="true"
+         @bind-Open="_isOpen"
+         ActivationEvent="@MouseEvent.LeftClick">
+    <ActivatorContent>
+        <MudBadge Content="@NotificationService.UnreadCount"
+                  Overlap="true"
+                  Color="Color.Error"
+                  Visible="@(NotificationService.UnreadCount > 0)"
+                  Class="mx-6 my-4">
+            <MudIconButton Icon="@Icons.Material.Filled.Notifications"
+                           Color="Color.Inherit"
+                           Size="Size.Medium"/>
+        </MudBadge>
+    </ActivatorContent>
+    <ChildContent>
+        <MudPaper Style="width: 380px; max-height: 500px;" Elevation="0">
+            @if (NotificationService.Notifications.Any())
+            {
+                <MudList T="string" Dense="true" Style="max-height: 400px; overflow-y: auto;">
+                    <MudListSubheader>
+                        <div class="d-flex justify-space-between align-center" style="width: 100%;">
+                            <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                                <strong>New Characters</strong>
+                            </MudText>
+                            <MudIconButton Icon="@Icons.Material.Filled.Clear" 
+                                          Size="Size.Small" 
+                                          OnClick="@ClearNotifications"
+                                          Title="Clear all notifications" />
+                        </div>
+                    </MudListSubheader>
+                    <MudDivider />
+                    
+                    @foreach (var notification in NotificationService.Notifications)
+                    {
+                        <MudListItem T="string" Style="@(!notification.IsRead ? "background-color: rgba(0, 255, 65, 0.05);" : "")">
+                            <div class="d-flex align-center">
+                                <MudAvatar Color="Color.Primary" Size="Size.Medium" Class="mr-3">
+                                    @notification.CharacterName[0]
+                                </MudAvatar>
+                                <div class="flex-grow-1">
+                                    <MudText Typo="Typo.body2">
+                                        <strong>@notification.CharacterName</strong> was added
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @GetRelativeTime(notification.Timestamp)
+                                    </MudText>
+                                </div>
+                                @if (!notification.IsRead)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.FiberManualRecord" 
+                                            Color="Color.Success" 
+                                            Size="Size.Small" />
+                                }
+                            </div>
+                        </MudListItem>
+                        <MudDivider />
+                    }
+                </MudList>
+                
+                <MudPaper Elevation="1" Class="pa-2" Style="border-top: 1px solid var(--mud-palette-divider);">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                        Last checked: @GetLastCheckTimeDisplay()
+                    </MudText>
+                </MudPaper>
+            }
+            else
+            {
+                <div class="pa-8 d-flex flex-column align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.NotificationsNone" 
+                            Size="Size.Large" 
+                            Color="Color.Secondary"
+                            Style="font-size: 4rem;" />
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-4">
+                        No new notifications
+                    </MudText>
+                    @if (NotificationService.LastCheckTime.HasValue)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+                            Last checked: @GetLastCheckTimeDisplay()
+                        </MudText>
+                    }
+                </div>
+            }
+        </MudPaper>
+    </ChildContent>
+</MudMenu>
+
+@code {
+    private bool _isOpen;
+
+    protected override void OnInitialized()
+    {
+        NotificationService.OnNotificationsChanged += OnNotificationChanged;
+        Console.WriteLine("NotificationBell: Subscribed to notifications");
+    }
+
+    private void OnNotificationChanged()
+    {
+        Console.WriteLine($"NotificationBell: Notification changed. Count: {NotificationService.Notifications.Count}, Unread: {NotificationService.UnreadCount}");
+        InvokeAsync(StateHasChanged);
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (_isOpen && NotificationService.UnreadCount > 0)
+        {
+            NotificationService.MarkAllAsRead();
+            StateHasChanged();
+        }
+    }
+
+    private void ClearNotifications()
+    {
+        NotificationService.ClearAll();
+        _isOpen = false;
+    }
+
+    private string GetRelativeTime(DateTime timestamp)
+    {
+        var timeSpan = DateTime.UtcNow - timestamp;
+
+        if (timeSpan.TotalMinutes < 1)
+            return "Just now";
+        if (timeSpan.TotalMinutes < 60)
+            return $"{(int)timeSpan.TotalMinutes}m ago";
+        if (timeSpan.TotalMinutes < 1440)
+            return $"{(int)timeSpan.TotalHours}h ago";
+        return $"{(int)timeSpan.TotalDays}d ago";
+    }
+
+    private string GetLastCheckTimeDisplay()
+    {
+        if (!NotificationService.LastCheckTime.HasValue)
+            return "Never";
+
+        var lastCheck = NotificationService.LastCheckTime.Value.ToLocalTime();
+        var today = DateTime.Now.Date;
+
+        if (lastCheck.Date == today)
+            return $"Today at {lastCheck:HH:mm}";
+        
+        if (lastCheck.Date == today.AddDays(-1))
+            return $"Yesterday at {lastCheck:HH:mm}";
+        
+        return lastCheck.ToString("MMM dd, HH:mm");
+    }
+
+    public void Dispose()
+    {
+        NotificationService.OnNotificationsChanged -= OnNotificationChanged;
+        Console.WriteLine("NotificationBell: Unsubscribed from notifications");
+    }
+}

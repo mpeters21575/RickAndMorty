@@ -1,0 +1,84 @@
+@using RickAndMorty.BlazorWasm.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" Class="d-flex justify-center align-center mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.Tv" 
+                         Color="Color.Primary" 
+                         Style="font-size: 8rem;" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-2">@Episode.Name</MudText>
+                <MudText Typo="Typo.h6" Align="Align.Center" Color="Color.Secondary" Class="mb-4">
+                    Episode @Episode.Episode
+                </MudText>
+
+                <MudDivider Class="my-4" />
+
+                <MudList T="string" Dense="true">
+                    <MudListItem Icon="@Icons.Material.Filled.Badge">
+                        <MudText Typo="Typo.body1">
+                            <strong>Episode ID:</strong> @Episode.Id
+                        </MudText>
+                    </MudListItem>
+                    <MudListItem Icon="@Icons.Material.Filled.Numbers">
+                        <MudText Typo="Typo.body1">
+                            <strong>Episode Code:</strong> @Episode.Episode
+                        </MudText>
+                    </MudListItem>
+                    <MudListItem Icon="@Icons.Material.Filled.CalendarToday">
+                        <MudText Typo="Typo.body1">
+                            <strong>Air Date:</strong> @Episode.AirDate
+                        </MudText>
+                    </MudListItem>
+                    <MudListItem Icon="@Icons.Material.Filled.People">
+                        <MudText Typo="Typo.body1">
+                            <strong>Characters Featured:</strong> @Episode.CharacterCount
+                        </MudText>
+                    </MudListItem>
+                    <MudListItem Icon="@Icons.Material.Filled.LiveTv">
+                        <MudText Typo="Typo.body1">
+                            <strong>Season:</strong> @GetSeasonNumber(Episode.Episode)
+                        </MudText>
+                    </MudListItem>
+                </MudList>
+
+                <MudAlert Severity="Severity.Info" Class="mt-4" Dense="true">
+                    <MudText Typo="Typo.body2">
+                        This episode features @Episode.CharacterCount characters from the Rick and Morty universe.
+                    </MudText>
+                </MudAlert>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Variant="Variant.Filled" Color="Color.Primary">
+            Close
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public EpisodeDto Episode { get; set; } = default!;
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+
+    private string GetSeasonNumber(string episode)
+    {
+        if (episode.Length >= 3)
+        {
+            var seasonPart = episode.Substring(0, 3);
+            var seasonNumber = seasonPart.Substring(1);
+            return $"Season {int.Parse(seasonNumber)}";
+        }
+        return "Unknown";
+    }
+}

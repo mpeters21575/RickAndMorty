@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using RickAndMorty.Infrastructure;
+using RickAndMorty.Infrastructure.Configuration;
 using RickAndMorty.Web.CrossCutting;
 using RickAndMorty.Web.CrossCutting.Models;
 
@@ -11,8 +13,13 @@ public interface IGetCharactersQuery
     Task<GetCharactersResponse> ExecuteAsync(CancellationToken cancellationToken = default);
 }
 
-public sealed class GetCharactersQuery(AppDbContext dbContext, IMemoryCache cache) : IGetCharactersQuery
+public sealed class GetCharactersQuery(
+    AppDbContext dbContext, 
+    IMemoryCache cache,
+    IOptions<CharacterMonitorSettings> monitorSettings) : IGetCharactersQuery
 {
+    private readonly CharacterMonitorSettings _monitorSettings = monitorSettings.Value;
+
     public async Task<GetCharactersResponse> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         if (cache.TryGetValue(CacheKeys.Characters, out CachedCharacters? cached) && cached is not null)
@@ -28,13 +35,15 @@ public sealed class GetCharactersQuery(AppDbContext dbContext, IMemoryCache cach
                 c.Name,
                 c.Status,
                 c.Species,
-                c.Origin.Name
+                c.Origin.Name,
+                c.ImageUrl
             ))
             .ToListAsync(cancellationToken);
 
         var cachedData = new CachedCharacters(characters, DateTime.UtcNow);
         
-        cache.Set(CacheKeys.Characters, cachedData, TimeSpan.FromMinutes(5));
+        var cacheExpiration = TimeSpan.FromMinutes(_monitorSettings.IntervalMinutes);
+        cache.Set(CacheKeys.Characters, cachedData, cacheExpiration);
 
         return new GetCharactersResponse(characters, true, cachedData.FetchedAt);
     }
