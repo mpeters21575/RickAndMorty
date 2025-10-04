@@ -1,311 +1,219 @@
 # Rick and Morty Character Database
 
-A full-stack .NET 8 application that fetches character and episode data from the Rick and Morty API, stores it in SQL Server, and displays it through a beautiful Blazor WebAssembly frontend with MudBlazor.
+A full-stack .NET 8 application for managing Rick and Morty characters with real-time notifications using SignalR. The application features a Blazor WebAssembly frontend, ASP.NET Core Web API backend, and background services for monitoring database changes.
 
 ## Architecture
 
-This solution follows **Vertical Slice Architecture** with clear separation of concerns:
+### Clean Architecture Pattern
+- **Domain Layer** - Core entities and business logic
+- **Infrastructure Layer** - Data access with EF Core, configurations
+- **Application Layer** - Web API with vertical slice architecture
+- **Presentation Layer** - Blazor WebAssembly SPA
+
+### Projects Structure
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                   Blazor WebAssembly (UI)                   │
-│              MudBlazor Components + Refit Client            │
-└─────────────────────────────────────────────────────────────┘
-                              ▲
-                              │ HTTPS/REST API
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    ASP.NET Core Web API                     │
-│              Carter (Minimal APIs) + CQRS Pattern           │
-└─────────────────────────────────────────────────────────────┘
-                              ▲
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   Infrastructure Layer                       │
-│          Entity Framework Core + SQL Server                 │
-└─────────────────────────────────────────────────────────────┘
-                              ▲
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     Domain Models                            │
-│              Character, Episode, Location                    │
-└─────────────────────────────────────────────────────────────┘
-
-        ┌───────────────────────────────────┐
-        │    Console App (Data Seeding)     │
-        │   Fetches from Rick & Morty API   │
-        └───────────────────────────────────┘
+RickAndMorty/
+├── RickAndMorty.Domain/              # Core entities
+├── RickAndMorty.Infrastructure/      # EF Core, DbContext, configurations
+├── RickAndMorty.Console/             # Data seeding CLI app
+├── RickAndMorty.Web/                 # ASP.NET Core Web API
+├── RickAndMorty.BlazorWasm/          # Blazor WASM frontend
+└── RickAndMorty.Tests/               # Unit & integration tests
 ```
-
-### Projects
-
-- **RickAndMorty.Domain** - Domain models (Character, Episode, Location)
-- **RickAndMorty.Infrastructure** - EF Core DbContext, configurations, caching
-- **RickAndMorty.Console** - Data fetching from Rick and Morty API with upsert logic
-- **RickAndMorty.Web** - ASP.NET Core Web API with Carter endpoints
-- **RickAndMorty.BlazorWasm** - Blazor WebAssembly UI with MudBlazor
-- **RickAndMorty.Tests** - Unit and integration tests
-
-## Tech Stack
-
-### Backend
-- **.NET 8** - Latest LTS framework
-- **Entity Framework Core 8.0** - ORM with Code First migrations
-- **SQL Server 2019** - Database
-- **Carter 8.0** - Minimal API endpoints
-- **Scrutor 4.2** - Assembly scanning for DI
-
-### Frontend
-- **Blazor WebAssembly** - Client-side SPA framework
-- **MudBlazor 7.8** - Material Design component library
-- **Refit 7.0** - Type-safe HTTP client
-
-### Design Patterns & Principles
-- **Vertical Slice Architecture** - Features organized by use case
-- **CQRS** - Separate Query and Command handlers
-- **Repository Pattern** - Via EF Core DbContext
-- **Dependency Injection** - Built-in .NET DI container
-- **SOLID Principles** - Single responsibility, dependency inversion
-- **YAGNI** - No over-engineering, simple solutions
-
-## Prerequisites
-
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop)
-- SQL Server (via Docker) or local SQL Server instance
-
-## Getting Started
-
-### 1. Start SQL Server Database
-
-**macOS:**
-```bash
-docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=MyS3cr3tP@$$w0rd!' \
-  -p 1433:1433 --name RickAndMorty \
-  -d mcr.microsoft.com/mssql/server:2019-latest
-```
-
-**Windows (PowerShell):**
-```powershell
-docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=MyS3cr3tP@$$w0rd!" `
-  -p 1433:1433 --name RickAndMorty `
-  -d mcr.microsoft.com/mssql/server:2019-latest
-```
-
-**Windows (CMD):**
-```cmd
-docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=MyS3cr3tP@$$w0rd!" ^
-  -p 1433:1433 --name RickAndMorty ^
-  -d mcr.microsoft.com/mssql/server:2019-latest
-```
-
-**Verify container is running:**
-```bash
-docker ps
-```
-
-**Stop container:**
-```bash
-docker stop RickAndMorty
-```
-
-**Restart container:**
-```bash
-docker start RickAndMorty
-```
-
-**Remove container:**
-```bash
-docker stop RickAndMorty
-docker rm RickAndMorty
-```
-
-### 2. Run Console App (Seed Database)
-
-The console application fetches all characters and episodes from the Rick and Morty API and stores them in the database using an upsert strategy.
-
-```bash
-cd src/RickAndMorty.Console
-dotnet run
-```
-
-**What it does:**
-- Fetches all characters (alive status only) from https://rickandmortyapi.com/api/character
-- Fetches all episodes from https://rickandmortyapi.com/api/episode
-- Creates database and applies migrations automatically
-- Upserts data (inserts new, updates existing)
-- Shows progress: "Successfully processed X characters: Y inserted, Z updated"
-
-### 3. Run Web API
-
-The Web API provides RESTful endpoints for the Blazor frontend.
-
-```bash
-cd src/RickAndMorty.Web
-dotnet run
-```
-
-**API runs at:** `http://localhost:5116` or `https://localhost:7274`
-
-**Swagger UI:** `http://localhost:5116/swagger`
-
-**Available Endpoints:**
-- `GET /api/characters` - List all characters (cached 5 minutes)
-- `POST /api/characters` - Add new character
-- `GET /api/characters/planet/{planetName}` - Filter by planet
-- `GET /api/episodes` - List all episodes (cached 5 minutes)
-
-### 4. Run Blazor WebAssembly App
-
-The Blazor app provides a beautiful, responsive UI with Rick and Morty theming.
-
-**Update API URL (if needed):**
-
-Edit `src/RickAndMorty.BlazorWasm/wwwroot/appsettings.json`:
-```json
-{
-  "ApiBaseUrl": "http://localhost:5116"
-}
-```
-
-**Run the app:**
-```bash
-cd src/RickAndMorty.BlazorWasm
-dotnet run
-```
-
-**App runs at:** `http://localhost:5000` or `https://localhost:5001`
 
 ## Features
 
-### Console Application
-- Fetches data from Rick and Morty public API
-- Pagination support (automatically fetches all pages)
-- Upsert logic (no duplicate data)
-- Progress reporting
-- Filters: Only "Alive" characters stored
+### Backend (Web API)
+- **Vertical Slice Architecture** with Carter for minimal APIs
+- **CQRS Pattern** - Separate read (Query) and write (Command) operations
+- **SignalR Hub** - Real-time push notifications to clients
+- **Background Service** - Monitors database for new characters
+- **Memory Caching** - 5-minute cache for character and episode data
+- **Entity Framework Core** - SQL Server database with migrations
+- **Swagger/OpenAPI** - API documentation
 
-### Web API
-- RESTful endpoints with Carter (Minimal APIs)
-- Response caching (5 minutes)
-- CORS enabled for Blazor app
-- Swagger/OpenAPI documentation
-- Vertical slice organization by feature
-- Headers: `from-database`, `last-fetched-at`
+### Frontend (Blazor WASM)
+- **MudBlazor UI** - Modern Material Design components
+- **Real-time Notifications** - Bell icon with unread badge
+- **SignalR Client** - Receives live updates from API
+- **Refit** - Type-safe HTTP client
+- **Responsive Design** - Dark/light theme support
+- **Advanced Filtering** - Search by name, status, species, and planet
 
-### Blazor WebAssembly
-- **Rick and Morty Theme** - Custom MudBlazor theme with portal green colors
-- **Dark/Light Mode** - Toggle between themes
-- **Responsive Design** - Mobile, tablet, desktop optimized
-- **Characters Page:**
-    - Paginated table (10, 25, 50, 100 per page)
-    - Search by name or species
-    - Filter by planet
-    - Filter by status (Alive/Dead/Unknown)
-    - Sortable columns
-    - Add new characters via modal dialog
-- **Planets Page:**
-    - Search characters by planet origin
-    - Real-time filtering
-    - Empty states with helpful messages
-- **Episodes Page:**
-    - Paginated table with all episodes
-    - Search by name or episode code
-    - Filter by season (S01, S02, etc.)
-    - Sortable columns
-    - Air date display
-- **Navigation:**
-    - Collapsible side drawer
-    - Refresh button
-    - Theme toggle
-    - External API documentation link
+### Key Capabilities
+- View all Rick and Morty characters
+- Filter characters by name, status, and species
+- Search characters by origin planet
+- Browse all episodes with character counts
+- Add custom characters to the database
+- Real-time notifications when new characters are added
+- Background monitoring of database changes
+- Automatic cache invalidation
 
-### Custom Features
-- **Animated Portal Loader** - Rick and Morty themed loading screen
-- **Custom Portal Icon** - SVG portal gun icon in app bar
-- **Status Color Coding** - Green (alive), Red (dead), Grey (unknown)
-- **Form Validation** - Real-time validation with error messages
-- **Snackbar Notifications** - Success/error feedback
+## Technology Stack
 
-## Database Schema
+### Backend
+- .NET 8
+- ASP.NET Core Web API
+- Entity Framework Core 8
+- SQL Server
+- Carter (Minimal APIs)
+- SignalR
+- Scrutor (Assembly scanning)
+- Swashbuckle (Swagger)
 
-### Characters Table
-```sql
-CREATE TABLE Characters (
-    Id INT PRIMARY KEY,
-    Name NVARCHAR(200) NOT NULL,
-    Status NVARCHAR(50) NOT NULL,
-    Species NVARCHAR(100) NOT NULL,
-    Origin_Name NVARCHAR(200),
-    Origin_Url NVARCHAR(500),
-    CreatedAt DATETIME2 NOT NULL,
-    INDEX IX_Characters_Status (Status),
-    INDEX IX_Characters_CreatedAt (CreatedAt)
-)
-```
+### Frontend
+- Blazor WebAssembly (.NET 8)
+- MudBlazor 7.8.0
+- Refit 8.0 (HTTP client)
+- SignalR Client 7.0
 
-### Episodes Table
-```sql
-CREATE TABLE Episodes (
-    Id INT PRIMARY KEY,
-    Name NVARCHAR(200) NOT NULL,
-    EpisodeCode NVARCHAR(10) NOT NULL,
-    AirDate NVARCHAR(50) NOT NULL,
-    CreatedAt DATETIME2 NOT NULL,
-    INDEX IX_Episodes_EpisodeCode (EpisodeCode),
-    INDEX IX_Episodes_CreatedAt (CreatedAt)
-)
-```
+### Testing
+- xUnit
+- Moq
+- EF Core InMemory
 
-## Development
+## Getting Started
 
-### Run Tests
+### Prerequisites
+- .NET 8 SDK
+- SQL Server (LocalDB, Docker, or Azure SQL)
+- Docker (optional - for SQL Server container)
+- Visual Studio 2022 or VS Code
+
+### Database Setup
+
+#### Option 1: Using Docker (Recommended)
+
+Run SQL Server in a Docker container:
+
 ```bash
-cd src/RickAndMorty.Tests
-dotnet test
+docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=MyS3cr3tP@$w0rd!' -p 1433:1433 --name RickAndMorty -d mcr.microsoft.com/mssql/server:2019-latest
 ```
 
-### Create Migration
+Connection string is already configured in `appsettings.json` to use this container.
+
+#### Option 2: Using Local SQL Server
+
+Update the connection string in `RickAndMorty.Web/appsettings.json` to point to your SQL Server instance.
+
+#### Database Migrations
+
+Migrations are **automatically applied** when the Web API starts. Alternatively, apply manually:
+
 ```bash
-cd src/RickAndMorty.Infrastructure
-dotnet ef migrations add MigrationName --startup-project ../RickAndMorty.Web
+cd RickAndMorty.Web
+dotnet ef database update
 ```
 
-### Update Database
+#### Seed Initial Data
+
+Run the Console app to fetch and populate data from the Rick and Morty API:
+
 ```bash
-dotnet ef database update --startup-project ../RickAndMorty.Web
+cd RickAndMorty.Console
+dotnet run
 ```
 
-### Build Solution
+This fetches all characters and episodes from the public API and stores them in your database.
+
+### Running the Application
+
+#### Option 1: Multiple Startup Projects (Visual Studio)
+
+1. Right-click solution → Properties → Multiple Startup Projects
+2. Set both `RickAndMorty.Web` and `RickAndMorty.BlazorWasm` to **Start**
+3. Press F5
+
+#### Option 2: Command Line
+
+Terminal 1 - API:
 ```bash
-dotnet build
+cd RickAndMorty.Web
+dotnet run
 ```
 
-### Clean Solution
+Terminal 2 - Blazor WASM:
 ```bash
-dotnet clean
+cd RickAndMorty.BlazorWasm
+dotnet run
 ```
 
 ## Configuration
 
-### Connection String
+### Web API Settings (`RickAndMorty.Web/appsettings.json`)
 
-Update `appsettings.json` in Console and Web projects:
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Data Source=localhost,1433;Initial Catalog=RickAndMorty;User ID=sa;Password=MyS3cr3tP@$$w0rd!;Encrypt=True;TrustServerCertificate=True"
-  }
+    "DefaultConnection": "Server=localhost,1433;Database=RickAndMorty;User ID=sa;Password=MyS3cr3tP@$w0rd!;TrustServerCertificate=True;Encrypt=False"
+  },
+  "RickAndMortyApi": {
+    "BaseUrl": "https://rickandmortyapi.com/api",
+    "CharacterEndpoint": "/character"
+  },
+  "CharacterMonitor": {
+    "Enabled": true,
+    "IntervalMinutes": 5,
+    "TestMode": false
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*"
 }
 ```
 
-### API Settings
+#### Connection String Settings
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `Server` | SQL Server host and port | `localhost,1433` |
+| `Database` | Database name | `RickAndMorty` |
+| `User ID` | SQL Server username | `sa` |
+| `Password` | SQL Server password | `MyS3cr3tP@$w0rd!` |
+| `TrustServerCertificate` | Trust self-signed certificates | `True` |
+| `Encrypt` | Use encrypted connection | `False` |
 
-Rick and Morty API configuration in `appsettings.json`:
+#### Rick and Morty API Settings
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `BaseUrl` | External API base URL | `https://rickandmortyapi.com/api` |
+| `CharacterEndpoint` | Character endpoint path | `/character` |
+
+#### Character Monitor Settings
+| Setting | Description | Default | Values |
+|---------|-------------|---------|--------|
+| `Enabled` | Enable background monitoring | `true` | `true`/`false` |
+| `IntervalMinutes` | Check interval in minutes | `5` | Any positive integer |
+| `TestMode` | Send test messages instead of real notifications | `false` | `true`/`false` |
+
+**Note:** When `TestMode = true`, the monitor sends periodic test messages to verify SignalR connectivity without checking for actual database changes.
+
+### Blazor WASM Settings (`RickAndMorty.BlazorWasm/wwwroot/appsettings.json`)
+
 ```json
 {
+  "ApiBaseUrl": "https://localhost:7274"
+}
+```
+
+| Setting | Description | Required |
+|---------|-------------|----------|
+| `ApiBaseUrl` | Web API base URL (must match API port) | Yes |
+
+**Important:** Update `ApiBaseUrl` to match your Web API's actual URL and port.
+
+### Console App Settings (`RickAndMorty.Console/appsettings.json`)
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost,1433;Database=RickAndMorty;User ID=sa;Password=MyS3cr3tP@$w0rd!;TrustServerCertificate=True;Encrypt=False"
+  },
   "RickAndMortyApi": {
     "BaseUrl": "https://rickandmortyapi.com/api",
     "CharacterEndpoint": "/character"
@@ -313,112 +221,162 @@ Rick and Morty API configuration in `appsettings.json`:
 }
 ```
 
-### CORS Policy
+Uses the same settings as the Web API for database and external API access.
 
-Update allowed origins in `RickAndMorty.Web/Program.cs`:
-```csharp
-policy.WithOrigins("https://localhost:5001", "http://localhost:5000")
+### Environment-Specific Configuration
+
+For development, create `appsettings.Development.json`:
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost,1433;Database=RickAndMortyDev;User ID=sa;Password=MyS3cr3tP@$w0rd!;TrustServerCertificate=True;Encrypt=False"
+  },
+  "CharacterMonitor": {
+    "Enabled": true,
+    "IntervalMinutes": 1,
+    "TestMode": true
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Debug",
+      "Microsoft.AspNetCore": "Information"
+    }
+  }
+}
 ```
 
-## Package Dependencies
+This allows faster monitoring intervals and test mode for development.
 
-### Infrastructure
-- `Microsoft.EntityFrameworkCore` (8.0.0)
-- `Microsoft.EntityFrameworkCore.SqlServer` (8.0.0)
-- `Microsoft.EntityFrameworkCore.Relational` (8.0.0)
+## API Endpoints
 
-### Web API
-- `Carter` (8.0.0) - Minimal API framework
-- `Scrutor` (4.2.2) - Assembly scanning
-- `Swashbuckle.AspNetCore` (6.6.2) - Swagger/OpenAPI
-- `Microsoft.AspNetCore.OpenApi` (8.0.20)
+### Characters
+- `GET /api/characters` - Get all characters (cached)
+- `GET /api/characters/filter?name={name}&status={status}&species={species}` - Filter characters
+- `GET /api/characters/planet/{planetName}` - Get characters by planet
+- `POST /api/characters` - Add new character
 
-### Console
-- `Microsoft.Extensions.Hosting` (8.0.0)
-- `Microsoft.Extensions.Http` (8.0.0)
+### Episodes
+- `GET /api/episodes` - Get all episodes (cached)
 
-### Blazor WASM
-- `Microsoft.AspNetCore.Components.WebAssembly` (8.0.0)
-- `MudBlazor` (7.8.0) - UI component library
-- `Refit.HttpClientFactory` (7.0.0) - Type-safe HTTP client
+### SignalR Hub
+- `/hubs/character` - WebSocket endpoint for real-time notifications
 
-### Tests
-- `xunit` (2.9.3)
-- `Microsoft.NET.Test.Sdk` (18.0.0)
-- `Microsoft.EntityFrameworkCore.InMemory` (8.0.0)
-- `Moq` (4.20.72)
+## SignalR Events
 
-## Design Patterns Used
+### Server → Client
+- `CharacterAdded` - Fired when a character is manually added
+- `NewCharactersDetected` - Fired when background service detects new characters
+- `CharacterMonitorTest` - Test event (when TestMode = true)
 
-### CQRS (Command Query Responsibility Segregation)
-- **Queries:** `GetCharactersQuery`, `GetEpisodesQuery`, `GetCharactersByPlanetQuery`
-- **Commands:** `AddCharacterCommand`
-- Separate read/write concerns
+## Notification System
 
-### Repository Pattern
-- EF Core `DbContext` acts as repository
-- `DbSet<T>` provides generic repository functionality
+The application features a real-time notification system with:
 
-### Factory Pattern
-- `HttpClientFactory` for HTTP clients
-- Refit client factory
+- **Bell Icon** - Shows unread notification count
+- **Notification Menu** - Displays recent character additions
+- **Relative Timestamps** - "Just now", "5m ago", "2h ago"
+- **Last Checked Time** - Displays when notifications were last viewed
+- **Auto-refresh** - Table updates automatically when new characters are added
+- **Max 50 notifications** - Automatically removes oldest notifications
 
-### Dependency Injection
-- Constructor injection throughout
-- Scrutor for auto-registration
+## Background Services
 
-### Strategy Pattern
-- Caching strategy (5-minute cache)
-- Filter strategies (status, planet, search)
+### CharacterMonitorHostedService
 
-### Builder Pattern
-- `WebApplicationBuilder` for app configuration
-- `MudTheme` builder for theming
+Monitors the database every N minutes (configurable) and broadcasts SignalR notifications when new characters are detected.
 
-## API Response Caching
+**Test Mode:** Sends periodic test messages to verify SignalR connectivity
+**Production Mode:** Only sends notifications when actual changes are detected
 
-The API implements in-memory caching with `IMemoryCache`:
-- **Cache Duration:** 5 minutes
-- **Cache Invalidation:** Automatic on POST operations
-- **Cache Keys:** Stored in `Infrastructure.Caching.CacheKeys`
-- **Headers:** `from-database` indicates cache hit/miss
+## Caching Strategy
 
-## Performance Optimizations
+- **Characters:** Cached for 5 minutes (based on `CharacterMonitor.IntervalMinutes`)
+- **Episodes:** Cached for 5 minutes
+- **Cache Invalidation:** Automatically cleared when new characters are added
+- **Response Headers:** `from-database` and `last-fetched-at` indicate cache status
 
-1. **Pagination** - MudTable with configurable page sizes
-2. **Caching** - Server-side 5-minute cache
-3. **Debouncing** - 300ms search debounce
-4. **AsNoTracking** - Read-only queries don't track changes
-5. **Bulk Operations** - `AddRangeAsync`, `UpdateRange` for batch inserts
-6. **Indexing** - Database indexes on Status, CreatedAt, EpisodeCode
-7. **Lazy Loading** - Components load data on initialization
+## Testing
+
+Run all tests:
+```bash
+dotnet test
+```
+
+### Test Coverage
+- **Unit Tests:** `FetchCharactersServiceTests` - HTTP client mocking with Moq
+- **Integration Tests:** `GetCharactersQueryTests` - EF Core InMemory database
+
+## Project Highlights
+
+### Design Patterns
+- Clean Architecture
+- CQRS (Command Query Responsibility Segregation)
+- Vertical Slice Architecture
+- Repository Pattern (via EF Core)
+- Dependency Injection
+
+### .NET 8 Features
+- Primary Constructors
+- Record Types
+- Pattern Matching
+- Global Using Directives
+- Nullable Reference Types
+- Minimal APIs (via Carter)
+
+### Best Practices
+- Async/await throughout
+- Scoped service lifetimes
+- Proper disposal with IAsyncDisposable
+- Structured logging
+- Exception handling
+- Response caching
+- CORS configuration
 
 ## Troubleshooting
 
-### SQL Server Connection Failed
-- Ensure Docker container is running: `docker ps`
-- Check port 1433 is available: `netstat -an | grep 1433`
-- Verify password meets SQL Server complexity requirements
+### SignalR Not Connecting
 
-### API CORS Error
-- Check allowed origins in Web API CORS policy
-- Ensure Blazor app URL matches CORS configuration
+1. Check CORS settings in `RickAndMorty.Web/Program.cs`
+2. Verify `ApiBaseUrl` in Blazor WASM `appsettings.json` matches Web API URL
+3. Check browser console for connection errors
 
-### Blazor App Not Loading
-- Verify API is running and accessible
-- Check `appsettings.json` ApiBaseUrl
-- Clear browser cache
+### Table Not Refreshing
 
-### Database Migration Errors
-- Delete `Migrations` folder and recreate: `dotnet ef migrations add Initial`
-- Drop database and recreate: `docker exec -it RickAndMorty /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'MyS3cr3tP@$$w0rd!' -Q "DROP DATABASE RickAndMorty"`
+1. Check if cache is preventing refresh (look for `from-database: false` header)
+2. Verify `CharacterMonitor.Enabled = true` in API settings
+3. Run Console app to add new characters to trigger notifications
+
+### Database Migration Issues
+
+```bash
+# Drop and recreate database
+cd RickAndMorty.Web
+dotnet ef database drop
+dotnet ef database update
+```
+
+## Future Enhancements
+
+- [ ] Authentication/Authorization with JWT
+- [ ] Pagination for large datasets
+- [ ] Advanced search with Elasticsearch
+- [ ] Character image uploads
+- [ ] Episode-Character relationship management
+- [ ] Export to CSV/Excel
+- [ ] GraphQL API
+- [ ] Redis distributed cache
+- [ ] Docker containerization
 
 ## License
 
-This project uses data from the [Rick and Morty API](https://rickandmortyapi.com/), which is a free and open API. All Rick and Morty content and images are owned by their respective owners.
+This project is for educational purposes, demonstrating modern .NET 8 development practices.
 
 ## Credits
 
-- **API Data:** [Rick and Morty API](https://rickandmortyapi.com/)
-- **UI Framework:** [MudBlazor](https://mudblazor.com/)
-- **Theme Inspiration:** Rick and Morty TV Series
+- Data from [Rick and Morty API](https://rickandmortyapi.com/)
+- UI components by [MudBlazor](https://mudblazor.com/)
+
+---
+
+**Built with .NET 8 | Clean Architecture | SignalR | Blazor WASM**
