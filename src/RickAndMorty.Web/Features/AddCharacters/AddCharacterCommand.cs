@@ -44,7 +44,7 @@ public sealed class AddCharacterCommand(
 
         cache.Remove(CacheKeys.Characters);
 
-        await hubContext.Clients.All.SendAsync("CharacterAdded", character.Name, cancellationToken);
+        await hubContext.Clients.All.SendCoreAsync("CharacterAdded", [character.Name], cancellationToken);
 
         return character.Id;
     }
