@@ -89,7 +89,7 @@ RickAndMorty/
 Run SQL Server in a Docker container:
 
 ```bash
-docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=MyS3cr3tP@$w0rd!' -p 1433:1433 --name RickAndMorty -d mcr.microsoft.com/mssql/server:2019-latest
+docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=YOUR_STRONG_PWD' -p 1433:1433 --name RickAndMorty -d mcr.microsoft.com/mssql/server:2019-latest
 ```
 
 Connection string is already configured in `appsettings.json` to use this container.
@@ -147,7 +147,7 @@ dotnet run
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost,1433;Database=RickAndMorty;User ID=sa;Password=MyS3cr3tP@$w0rd!;TrustServerCertificate=True;Encrypt=False"
+    "DefaultConnection": "Server=localhost,1433;Database=RickAndMorty;User ID=sa;Password=YOUR_STRONG_PWD;TrustServerCertificate=True;Encrypt=False"
   },
   "RickAndMortyApi": {
     "BaseUrl": "https://rickandmortyapi.com/api",
@@ -174,7 +174,7 @@ dotnet run
 | `Server` | SQL Server host and port | `localhost,1433` |
 | `Database` | Database name | `RickAndMorty` |
 | `User ID` | SQL Server username | `sa` |
-| `Password` | SQL Server password | `MyS3cr3tP@$w0rd!` |
+| `Password` | SQL Server password | `YOUR_STRONG_PWD` |
 | `TrustServerCertificate` | Trust self-signed certificates | `True` |
 | `Encrypt` | Use encrypted connection | `False` |
 
@@ -212,7 +212,7 @@ dotnet run
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost,1433;Database=RickAndMorty;User ID=sa;Password=MyS3cr3tP@$w0rd!;TrustServerCertificate=True;Encrypt=False"
+    "DefaultConnection": "Server=localhost,1433;Database=RickAndMorty;User ID=sa;Password=YOUR_STRONG_PWD;TrustServerCertificate=True;Encrypt=False"
   },
   "RickAndMortyApi": {
     "BaseUrl": "https://rickandmortyapi.com/api",
@@ -230,7 +230,7 @@ For development, create `appsettings.Development.json`:
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost,1433;Database=RickAndMortyDev;User ID=sa;Password=MyS3cr3tP@$w0rd!;TrustServerCertificate=True;Encrypt=False"
+    "DefaultConnection": "Server=localhost,1433;Database=RickAndMortyDev;User ID=sa;Password=YOUR_STRONG_PWD;TrustServerCertificate=True;Encrypt=False"
   },
   "CharacterMonitor": {
     "Enabled": true,
@@ -278,7 +278,6 @@ The application features a real-time notification system with:
 - **Relative Timestamps** - "Just now", "5m ago", "2h ago"
 - **Last Checked Time** - Displays when notifications were last viewed
 - **Auto-refresh** - Table updates automatically when new characters are added
-- **Max 50 notifications** - Automatically removes oldest notifications
 
 ## Background Services
 
