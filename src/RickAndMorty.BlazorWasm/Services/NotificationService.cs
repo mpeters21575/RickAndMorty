@@ -1,12 +1,11 @@
-namespace RickAndMorty.BlazorWasm.Services;
+using RickAndMorty.BlazorWasm.Models;
 
 public interface INotificationService
 {
     event Action? OnNotificationsChanged;
     List<CharacterNotification> Notifications { get; }
     int UnreadCount { get; }
-    DateTime? LastCheckTime { get; }
-    void AddNotification(string characterName);
+    void AddNotification(string characterName, string imageUrl = "");
     void MarkAllAsRead();
     void ClearAll();
 }
@@ -14,30 +13,33 @@ public interface INotificationService
 public sealed class NotificationService : INotificationService
 {
     private readonly List<CharacterNotification> _notifications = new();
+    private const int MaxNotifications = 50;
 
     public event Action? OnNotificationsChanged;
     
     public List<CharacterNotification> Notifications => _notifications;
     
     public int UnreadCount => _notifications.Count(n => !n.IsRead);
-    
-    public DateTime? LastCheckTime { get; private set; }
 
-    public void AddNotification(string characterName)
+    public void AddNotification(string characterName, string imageUrl = "")
     {
         var notification = new CharacterNotification
         {
             Id = Guid.NewGuid(),
             CharacterName = characterName,
+            ImageUrl = imageUrl,
             Timestamp = DateTime.UtcNow,
             IsRead = false
         };
         
         _notifications.Insert(0, notification);
-        
+
+        if (_notifications.Count > MaxNotifications)
+        {
+            _notifications.RemoveAt(_notifications.Count - 1);
+        }
+
         OnNotificationsChanged?.Invoke();
-        
-        Console.WriteLine($"Notification added: {characterName}. Total: {_notifications.Count}, Unread: {UnreadCount}");
     }
 
     public void MarkAllAsRead()
@@ -47,22 +49,12 @@ public sealed class NotificationService : INotificationService
             notification.IsRead = true;
         }
         
-        LastCheckTime = DateTime.UtcNow;
         OnNotificationsChanged?.Invoke();
     }
 
     public void ClearAll()
     {
         _notifications.Clear();
-        LastCheckTime = DateTime.UtcNow;
         OnNotificationsChanged?.Invoke();
     }
-}
-
-public sealed class CharacterNotification
-{
-    public Guid Id { get; init; }
-    public string CharacterName { get; init; } = string.Empty;
-    public DateTime Timestamp { get; init; }
-    public bool IsRead { get; set; }
 }

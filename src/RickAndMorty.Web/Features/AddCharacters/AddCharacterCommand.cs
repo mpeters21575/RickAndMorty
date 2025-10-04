@@ -1,10 +1,8 @@
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using RickAndMorty.Domain.Models;
 using RickAndMorty.Infrastructure;
 using RickAndMorty.Web.CrossCutting;
-using RickAndMorty.Web.Hubs;
 
 namespace RickAndMorty.Web.Features.AddCharacters;
 
@@ -15,8 +13,7 @@ public interface IAddCharacterCommand
 
 public sealed class AddCharacterCommand(
     AppDbContext dbContext, 
-    IMemoryCache cache,
-    IHubContext<CharacterHub> hubContext) : IAddCharacterCommand
+    IMemoryCache cache) : IAddCharacterCommand
 {
     public async Task<int> ExecuteAsync(AddCharacterRequest request, CancellationToken cancellationToken = default)
     {
@@ -31,20 +28,15 @@ public sealed class AddCharacterCommand(
             Name = request.Name,
             Status = request.Status,
             Species = request.Species,
-            Origin = new Location 
-            { 
-                Name = request.OriginName, 
-                Url = string.Empty 
-            },
+            ImageUrl = string.Empty,
+            Origin = new Location { Name = request.OriginName, Url = string.Empty },
             CreatedAt = DateTime.UtcNow
         };
 
         await dbContext.Characters.AddAsync(character, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        cache.Remove(CacheKeys.Characters);
-
-        await hubContext.Clients.All.SendCoreAsync("CharacterAdded", [character.Name], cancellationToken);
+        cache.RemoveByPrefix(CacheKeys.Characters);
 
         return character.Id;
     }

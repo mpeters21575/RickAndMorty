@@ -15,11 +15,9 @@ public sealed class GetCharactersByPlanetQuery(AppDbContext dbContext) : IGetCha
         string planetName, 
         CancellationToken cancellationToken = default)
     {
-        var searchPattern = $"%{planetName}%";
-        
         return await dbContext.Characters
             .AsNoTracking()
-            .Where(c => EF.Functions.Like(c.Origin.Name, searchPattern))
+            .Where(c => c.Origin.Name.Contains(planetName))
             .OrderBy(c => c.Name)
             .Select(c => new CharacterDto(
                 c.Id,

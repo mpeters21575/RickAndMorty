@@ -40,9 +40,18 @@
                     {
                         <MudListItem T="string" Style="@(!notification.IsRead ? "background-color: rgba(0, 255, 65, 0.05);" : "")">
                             <div class="d-flex align-center">
-                                <MudAvatar Color="Color.Primary" Size="Size.Medium" Class="mr-3">
-                                    @notification.CharacterName[0]
-                                </MudAvatar>
+                                @if (!string.IsNullOrEmpty(notification.ImageUrl))
+                                {
+                                    <MudAvatar Size="Size.Medium" Class="mr-3">
+                                        <MudImage Src="@notification.ImageUrl" Alt="@notification.CharacterName" />
+                                    </MudAvatar>
+                                }
+                                else
+                                {
+                                    <MudAvatar Color="Color.Primary" Size="Size.Medium" Class="mr-3">
+                                        @notification.CharacterName[0]
+                                    </MudAvatar>
+                                }
                                 <div class="flex-grow-1">
                                     <MudText Typo="Typo.body2">
                                         <strong>@notification.CharacterName</strong> was added
@@ -62,12 +71,6 @@
                         <MudDivider />
                     }
                 </MudList>
-                
-                <MudPaper Elevation="1" Class="pa-2" Style="border-top: 1px solid var(--mud-palette-divider);">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
-                        Last checked: @GetLastCheckTimeDisplay()
-                    </MudText>
-                </MudPaper>
             }
             else
             {
@@ -79,12 +82,6 @@
                     <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-4">
                         No new notifications
                     </MudText>
-                    @if (NotificationService.LastCheckTime.HasValue)
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
-                            Last checked: @GetLastCheckTimeDisplay()
-                        </MudText>
-                    }
                 </div>
             }
         </MudPaper>
@@ -97,12 +94,10 @@
     protected override void OnInitialized()
     {
         NotificationService.OnNotificationsChanged += OnNotificationChanged;
-        Console.WriteLine("NotificationBell: Subscribed to notifications");
     }
 
     private void OnNotificationChanged()
     {
-        Console.WriteLine($"NotificationBell: Notification changed. Count: {NotificationService.Notifications.Count}, Unread: {NotificationService.UnreadCount}");
         InvokeAsync(StateHasChanged);
     }
 
@@ -111,7 +106,6 @@
         if (_isOpen && NotificationService.UnreadCount > 0)
         {
             NotificationService.MarkAllAsRead();
-            StateHasChanged();
         }
     }
 
@@ -129,31 +123,13 @@
             return "Just now";
         if (timeSpan.TotalMinutes < 60)
             return $"{(int)timeSpan.TotalMinutes}m ago";
-        if (timeSpan.TotalMinutes < 1440)
+        if (timeSpan.TotalHours < 24)
             return $"{(int)timeSpan.TotalHours}h ago";
         return $"{(int)timeSpan.TotalDays}d ago";
-    }
-
-    private string GetLastCheckTimeDisplay()
-    {
-        if (!NotificationService.LastCheckTime.HasValue)
-            return "Never";
-
-        var lastCheck = NotificationService.LastCheckTime.Value.ToLocalTime();
-        var today = DateTime.Now.Date;
-
-        if (lastCheck.Date == today)
-            return $"Today at {lastCheck:HH:mm}";
-        
-        if (lastCheck.Date == today.AddDays(-1))
-            return $"Yesterday at {lastCheck:HH:mm}";
-        
-        return lastCheck.ToString("MMM dd, HH:mm");
     }
 
     public void Dispose()
     {
         NotificationService.OnNotificationsChanged -= OnNotificationChanged;
-        Console.WriteLine("NotificationBell: Unsubscribed from notifications");
     }
 }

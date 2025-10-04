@@ -10,7 +10,7 @@ namespace RickAndMorty.Web.Features.GetCharacters;
 
 public interface IGetCharactersQuery
 {
-    Task<GetCharactersResponse> ExecuteAsync(CancellationToken cancellationToken = default);
+    Task<GetCharactersResponse> ExecuteAsync(int page = 1, int pageSize = 50, CancellationToken cancellationToken = default);
 }
 
 public sealed class GetCharactersQuery(
@@ -18,18 +18,28 @@ public sealed class GetCharactersQuery(
     IMemoryCache cache,
     IOptions<CharacterMonitorSettings> monitorSettings) : IGetCharactersQuery
 {
-    private readonly CharacterMonitorSettings _monitorSettings = monitorSettings.Value;
-
-    public async Task<GetCharactersResponse> ExecuteAsync(CancellationToken cancellationToken = default)
+    public async Task<GetCharactersResponse> ExecuteAsync(
+        int page = 1, 
+        int pageSize = 50, 
+        CancellationToken cancellationToken = default)
     {
-        if (cache.TryGetValue(CacheKeys.Characters, out CachedCharacters? cached) && cached is not null)
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var cacheKey = $"{CacheKeys.Characters}_page_{page}_size_{pageSize}";
+
+        if (cache.TryGetValue(cacheKey, out CachedCharacters? cached) && cached is not null)
         {
-            return new GetCharactersResponse(cached.Characters, false, cached.FetchedAt);
+            return new GetCharactersResponse(cached.Characters, false, cached.FetchedAt, cached.TotalCount);
         }
+
+        var totalCount = await dbContext.Characters.CountAsync(cancellationToken);
 
         var characters = await dbContext.Characters
             .AsNoTracking()
             .OrderBy(c => c.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(c => new CharacterDto(
                 c.Id,
                 c.Name,
@@ -40,11 +50,10 @@ public sealed class GetCharactersQuery(
             ))
             .ToListAsync(cancellationToken);
 
-        var cachedData = new CachedCharacters(characters, DateTime.UtcNow);
+        var cachedData = new CachedCharacters(characters, DateTime.UtcNow, totalCount);
         
-        var cacheExpiration = TimeSpan.FromMinutes(_monitorSettings.IntervalMinutes);
-        cache.Set(CacheKeys.Characters, cachedData, cacheExpiration);
+        cache.Set(cacheKey, cachedData, TimeSpan.FromMinutes(5));
 
-        return new GetCharactersResponse(characters, true, cachedData.FetchedAt);
+        return new GetCharactersResponse(characters, true, cachedData.FetchedAt, totalCount);
     }
 }

@@ -8,7 +8,6 @@
 @inject IDialogService DialogService
 @inject NavigationManager Navigation
 @inject IConfiguration Configuration
-@inject ILogger<Characters> Logger
 @implements IAsyncDisposable
 
 <PageTitle>Characters</PageTitle>
@@ -24,11 +23,13 @@
           Striped="true"
           Loading="@_loading"
           LoadingProgressColor="Color.Primary"
-          Filter="new Func<CharacterDto, bool>(FilterFunc)"
           @bind-SelectedItem="_selectedCharacter"
-          Height="calc(100vh - 250px)"
+          Height="calc(100vh - 320px)"
           FixedHeader="true"
           OnRowClick="@((TableRowClickEventArgs<CharacterDto> args) => OnRowClick(args))"
+          Virtualize="false"
+          AllowUnsorted="true"
+          RowsPerPage="int.MaxValue"
           T="CharacterDto">
     <ToolBarContent>
         <MudTextField @bind-Value="_searchString" 
@@ -78,9 +79,18 @@
     </HeaderContent>
     <RowTemplate>
         <MudTd DataLabel="ID">
-            <MudAvatar Color="Color.Primary" Size="Size.Small">
-                @context.Name[0]
-            </MudAvatar>
+            @if (!string.IsNullOrEmpty(context.ImageUrl))
+            {
+                <MudAvatar Size="Size.Small">
+                    <MudImage Src="@context.ImageUrl" Alt="@context.Name" />
+                </MudAvatar>
+            }
+            else
+            {
+                <MudAvatar Color="Color.Primary" Size="Size.Small">
+                    @context.Name[0]
+                </MudAvatar>
+            }
             <span class="ml-2">@context.Id</span>
         </MudTd>
         <MudTd DataLabel="Name">@context.Name</MudTd>
@@ -112,7 +122,39 @@
         <MudText>Loading characters...</MudText>
     </LoadingContent>
     <PagerContent>
-        <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="pa-2">
+            <MudText Typo="Typo.body2">
+                @if (_characters.Count > 0)
+                {
+                    <text>Showing @((_currentPage - 1) * _pageSize + 1) - @((_currentPage - 1) * _pageSize + _characters.Count) of @_totalCount characters</text>
+                }
+                else
+                {
+                    <text>No characters to display</text>
+                }
+            </MudText>
+            <MudStack Row="true" Spacing="2">
+                <MudIconButton Icon="@Icons.Material.Filled.FirstPage" 
+                               OnClick="() => GoToPage(1)" 
+                               Disabled="@(!_hasPreviousPage)" 
+                               Size="Size.Small" />
+                <MudIconButton Icon="@Icons.Material.Filled.NavigateBefore" 
+                               OnClick="PreviousPage" 
+                               Disabled="@(!_hasPreviousPage)" 
+                               Size="Size.Small" />
+                <MudText Typo="Typo.body2" Class="mx-4">
+                    Page @_currentPage of @_totalPages
+                </MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.NavigateNext" 
+                               OnClick="NextPage" 
+                               Disabled="@(!_hasNextPage)" 
+                               Size="Size.Small" />
+                <MudIconButton Icon="@Icons.Material.Filled.LastPage" 
+                               OnClick="() => GoToPage(_totalPages)" 
+                               Disabled="@(!_hasNextPage)" 
+                               Size="Size.Small" />
+            </MudStack>
+        </MudStack>
     </PagerContent>
 </MudTable>
 
@@ -125,6 +167,13 @@
     private string? _statusFilter;
     private HubConnection? _hubConnection;
 
+    private int _currentPage = 1;
+    private int _pageSize = 50;
+    private int _totalCount = 0;
+    private int _totalPages = 0;
+    private bool _hasPreviousPage = false;
+    private bool _hasNextPage = false;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadCharactersAsync();
@@ -133,62 +182,34 @@
 
     private async Task InitializeSignalR()
     {
+        var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://localhost:7274";
+        
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl($"{apiBaseUrl}/hubs/character")
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<string, string>("CharacterAdded", async (characterName, imageUrl) =>
+        {
+            NotificationService.AddNotification(characterName, imageUrl);
+            await InvokeAsync(StateHasChanged);
+            await LoadCharactersAsync();
+        });
+
+        _hubConnection.On<string>("CharacterMonitorTest", async (message) =>
+        {
+            NotificationService.AddNotification("Monitor Test");
+            Snackbar.Add($"Monitor Test: {message}", Severity.Info);
+            await InvokeAsync(StateHasChanged);
+        });
+
         try
         {
-            var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "http://localhost:5116";
-            Logger.LogInformation("Connecting to SignalR hub at: {Url}", $"{apiBaseUrl}/hubs/character");
-            
-            _hubConnection = new HubConnectionBuilder()
-                .WithUrl($"{apiBaseUrl}/hubs/character")
-                .WithAutomaticReconnect()
-                .ConfigureLogging(logging =>
-                {
-                    logging.SetMinimumLevel(LogLevel.Debug);
-                })
-                .Build();
-
-            _hubConnection.On<string>("CharacterAdded", async (characterName) =>
-            {
-                Logger.LogInformation("SignalR: CharacterAdded received - {Name}", characterName);
-                Console.WriteLine($"DEBUG: CharacterAdded - {characterName}");
-                
-                NotificationService.AddNotification(characterName);
-                
-                await InvokeAsync(StateHasChanged);
-                await LoadCharactersAsync();
-            });
-
-            _hubConnection.On<string>("CharacterMonitorTest", (message) =>
-            {
-                Logger.LogInformation("SignalR: CharacterMonitorTest - {Message}", message);
-                Console.WriteLine($"DEBUG: CharacterMonitorTest - {message}");
-                Snackbar.Add($"Monitor Test: {message}", Severity.Info);
-                
-                NotificationService.AddNotification("Test Character");
-                InvokeAsync(StateHasChanged);
-            });
-
-            _hubConnection.On<int>("NewCharactersDetected", async (count) =>
-            {
-                Logger.LogInformation("SignalR: NewCharactersDetected - {Count}", count);
-                Console.WriteLine($"DEBUG: NewCharactersDetected - {count}");
-                
-                Snackbar.Add($"{count} new character(s) added to database!", Severity.Success);
-                NotificationService.AddNotification($"{count} new character{(count > 1 ? "s" : "")}");
-                
-                await InvokeAsync(StateHasChanged);
-                await LoadCharactersAsync();
-            });
-
             await _hubConnection.StartAsync();
-            Logger.LogInformation("SignalR connection established: {State}", _hubConnection.State);
-            Console.WriteLine($"DEBUG: SignalR State - {_hubConnection.State}");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to initialize SignalR");
-            Console.WriteLine($"DEBUG ERROR: {ex.Message}");
-            Snackbar.Add($"SignalR connection failed: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Failed to connect to notifications: {ex.Message}", Severity.Warning);
         }
     }
 
@@ -205,7 +226,17 @@
         try
         {
             _loading = true;
-            _characters = await CharacterService.GetAllCharactersAsync();
+            StateHasChanged();
+            
+            var response = await CharacterService.GetAllCharactersAsync(_currentPage, _pageSize);
+            
+            _characters = response.Data;
+            _totalCount = response.TotalCount;
+            _totalPages = response.TotalPages;
+            _hasPreviousPage = response.HasPreviousPage;
+            _hasNextPage = response.HasNextPage;
+            
+            StateHasChanged();
         }
         catch (Exception ex)
         {
@@ -214,6 +245,33 @@
         finally
         {
             _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task GoToPage(int page)
+    {
+        if (page < 1 || page > _totalPages) return;
+        
+        _currentPage = page;
+        await LoadCharactersAsync();
+    }
+
+    private async Task NextPage()
+    {
+        if (_hasNextPage)
+        {
+            _currentPage++;
+            await LoadCharactersAsync();
+        }
+    }
+
+    private async Task PreviousPage()
+    {
+        if (_hasPreviousPage)
+        {
+            _currentPage--;
+            await LoadCharactersAsync();
         }
     }
 
@@ -228,6 +286,11 @@
             var species = string.IsNullOrWhiteSpace(_speciesFilter) ? null : _speciesFilter.Trim();
 
             _characters = await CharacterService.GetFilteredCharactersAsync(name, status, species);
+            _totalCount = _characters.Count;
+            _currentPage = 1;
+            _totalPages = 1;
+            _hasPreviousPage = false;
+            _hasNextPage = false;
             
             Snackbar.Add($"Found {_characters.Count} character(s)", Severity.Success);
         }
@@ -246,6 +309,7 @@
         _searchString = string.Empty;
         _speciesFilter = string.Empty;
         _statusFilter = null;
+        _currentPage = 1;
         await LoadCharactersAsync();
         Snackbar.Add("Filters cleared", Severity.Info);
     }
@@ -256,11 +320,6 @@
         {
             await ApplyFilters();
         }
-    }
-
-    private bool FilterFunc(CharacterDto character)
-    {
-        return true;
     }
 
     private Color GetStatusColor(string status) => status.ToLower() switch
@@ -275,7 +334,7 @@
         var dialog = await DialogService.ShowAsync<AddCharacterDialog>("Add New Character");
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is CreateCharacterRequest request)
+        if (!result!.Canceled && result.Data is CreateCharacterRequest request)
         {
             try
             {

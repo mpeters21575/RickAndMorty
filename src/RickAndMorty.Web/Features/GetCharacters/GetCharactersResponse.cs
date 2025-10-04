@@ -5,5 +5,6 @@ namespace RickAndMorty.Web.Features.GetCharacters;
 public sealed record GetCharactersResponse(
     List<CharacterDto> Characters,
     bool FromDatabase,
-    DateTime? LastFetchedAt
+    DateTime? LastFetchedAt,
+    int TotalCount
 );

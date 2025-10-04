@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: rickandmorty-sql
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${SQL_PASSWORD:-YourStrongPassword123!}
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "${SQL_PASSWORD:-YourStrongPassword123!}" -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - rickandmorty-network
+
+  api:
+    build:
+      context: .
+      dockerfile: RickAndMorty.Web/Dockerfile
+    container_name: rickandmorty-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=RickAndMorty;User ID=sa;Password=${SQL_PASSWORD:-YourStrongPassword123!};TrustServerCertificate=True;Encrypt=False
+      - CharacterMonitor__Enabled=true
+      - CharacterMonitor__IntervalMinutes=5
+      - CharacterMonitor__TestMode=false
+      - CorsOrigins__0=https://localhost:5001
+      - CorsOrigins__1=http://localhost:5000
+      - CorsOrigins__2=http://blazor
+    ports:
+      - "7274:80"
+      - "7275:443"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - rickandmorty-network
+
+  blazor:
+    build:
+      context: .
+      dockerfile: RickAndMorty.BlazorWasm/Dockerfile
+    container_name: rickandmorty-blazor
+    environment:
+      - ApiBaseUrl=http://api:80
+    ports:
+      - "5001:80"
+    depends_on:
+      - api
+    networks:
+      - rickandmorty-network
+
+volumes:
+  sqlserver-data:
+
+networks:
+  rickandmorty-network:
+    driver: bridge

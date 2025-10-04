@@ -6,11 +6,11 @@ public sealed class CharacterHub : Hub
 {
     public async Task NotifyCharacterAdded(string characterName)
     {
-        await Clients.All.SendAsync("CharacterAdded", characterName);
+        await Clients.All.SendCoreAsync("CharacterAdded", [characterName]);
     }
     
     public async Task NotifyCacheInvalidated()
     {
-        await Clients.All.SendAsync("CacheInvalidated");
+        await Clients.All.SendCoreAsync("CacheInvalidated", []);
     }
 }

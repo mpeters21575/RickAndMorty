@@ -1,4 +1,5 @@
 using Carter;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using RickAndMorty.Infrastructure;
 using RickAndMorty.Infrastructure.Configuration;
@@ -16,15 +17,18 @@ builder.Services.Configure<CharacterMonitorSettings>(
 
 builder.Services.AddSignalR();
 
+var allowedOrigins = builder.Configuration.GetSection("CorsOrigins").Get<string[]>() 
+    ?? new[] { "https://localhost:5001", "http://localhost:5000" };
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazor", policy =>
     {
-        policy.WithOrigins("https://localhost:5001", "http://localhost:5000")
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials()
-              .WithExposedHeaders("from-database", "last-fetched-at");
+              .WithExposedHeaders("from-database", "last-fetched-at", "total-count");
     });
 });
 
@@ -36,12 +40,12 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "Rick and Morty API",
         Version = "v1",
-        Description = "API for managing Rick and Morty characters"
+        Description = "API for managing Rick and Morty characters with real-time SignalR notifications"
     });
 });
 
 builder.Services.AddCarter();
-
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.Scan(scan => scan
     .FromAssemblyOf<Program>()
     .AddClasses(classes => classes.Where(type => 
@@ -52,6 +56,9 @@ builder.Services.Scan(scan => scan
 );
 
 builder.Services.AddHostedService<CharacterMonitorHostedService>();
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>("database")
+    .AddCheck("signalr", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("SignalR hub is operational"));
 
 var app = builder.Build();
 
@@ -71,8 +78,10 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseHttpsRedirection();
 app.UseCors("AllowBlazor");
 app.MapCarter();
 app.MapHub<CharacterHub>("/hubs/character");
+app.MapHealthChecks("/health");
 
 await app.RunAsync();

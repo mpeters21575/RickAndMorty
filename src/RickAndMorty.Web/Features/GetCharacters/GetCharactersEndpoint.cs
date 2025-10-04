@@ -12,24 +12,30 @@ public sealed class GetCharactersEndpoint : ICarterModule
             .WithName("GetCharacters")
             .WithTags("Characters")
             .WithOpenApi()
-            .Produces<List<CharacterDto>>(200)
+            .Produces<PaginatedResponse<CharacterDto>>(200)
             .ProducesProblem(500);
     }
 
-    private static async Task<Results<Ok<List<CharacterDto>>, ProblemHttpResult>> HandleAsync(
+    private static async Task<Results<Ok<PaginatedResponse<CharacterDto>>, ProblemHttpResult>> HandleAsync(
         IGetCharactersQuery query,
-        HttpContext context,
-        CancellationToken cancellationToken)
+        int page = 1,
+        int pageSize = 50,
+        CancellationToken cancellationToken = default)
     {
-        var response = await query.ExecuteAsync(cancellationToken);
+        var queryResponse = await query.ExecuteAsync(page, pageSize, cancellationToken);
         
-        context.Response.Headers["from-database"] = response.FromDatabase.ToString().ToLowerInvariant();
-        
-        if (response.LastFetchedAt.HasValue)
-        {
-            context.Response.Headers["last-fetched-at"] = response.LastFetchedAt.Value.ToString("O");
-        }
+        var response = new PaginatedResponse<CharacterDto>(
+            Data: queryResponse.Characters,
+            Page: page,
+            PageSize: pageSize,
+            TotalCount: queryResponse.TotalCount,
+            TotalPages: (int)Math.Ceiling(queryResponse.TotalCount / (double)pageSize),
+            HasPreviousPage: page > 1,
+            HasNextPage: page < (int)Math.Ceiling(queryResponse.TotalCount / (double)pageSize),
+            FromDatabase: queryResponse.FromDatabase,
+            LastFetchedAt: queryResponse.LastFetchedAt
+        );
 
-        return TypedResults.Ok(response.Characters);
+        return TypedResults.Ok(response);
     }
 }

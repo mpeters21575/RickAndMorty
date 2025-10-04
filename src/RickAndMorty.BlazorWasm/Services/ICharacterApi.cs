@@ -6,7 +6,9 @@ namespace RickAndMorty.BlazorWasm.Services;
 public interface ICharacterApi
 {
     [Get("/api/characters")]
-    Task<List<CharacterDto>> GetAllCharactersAsync();
+    Task<PaginatedResponse<List<CharacterDto>>> GetAllCharactersAsync(
+        [Query] int page = 1,
+        [Query] int pageSize = 50);
 
     [Get("/api/characters/filter")]
     Task<List<CharacterDto>> GetFilteredCharactersAsync(
